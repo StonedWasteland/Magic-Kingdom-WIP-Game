@@ -51,8 +51,8 @@ A deliberately coherent starting squad with full role coverage:
 | Pyrokinesis | Elemental | Artillery / AoE | ✅ designed |
 | Cement Control | Material | Controller / terrain | ✅ designed |
 | Super Strength | Physical | Melee striker | ✅ designed |
-| Metal Skin | Morph | Tank / frontline | ⬜ next |
-| Regeneration | Biological | Sustain / medic | ⬜ todo |
+| Metal Skin | Morph | Tank / frontline | ✅ designed |
+| Regeneration | Biological | Sustain / medic | ⬜ next |
 
 **Deferred for a later batch:** Probability Pull (luck/conceptual), Blink (spatial).
 
