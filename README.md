@@ -24,7 +24,8 @@ Magic Kingdom Game/
         ├── 02-cement-control.md
         ├── 03-super-strength.md
         ├── 04-metal-skin.md
-        └── 05-regeneration.md
+        ├── 05-regeneration.md
+        └── 06-probability-pull.md
 ```
 
 When we scaffold actual code, the `client/ server/ shared/ content/` structure from
@@ -56,8 +57,8 @@ A deliberately coherent starting squad with full role coverage:
 | Metal Skin | Morph | Tank / frontline | ✅ designed |
 | Regeneration | Biological | Sustain / medic | ✅ designed |
 
-**Starter roster complete (5/5).** Next batch — deferred: Probability Pull (luck/conceptual),
-Blink (spatial).
+**Starter roster complete (5/5).** Next batch in progress: Probability Pull (conceptual/luck —
+✅ designed, power 06), Blink (spatial — ⬜ remaining).
 
 ## Open taxonomy note
 

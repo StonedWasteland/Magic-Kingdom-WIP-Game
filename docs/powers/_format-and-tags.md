@@ -28,8 +28,11 @@ The engine already supports three distinct ways a power is "fuelled" — an emer
 - **Scavenge** (Super Strength) — Strain + zone `Object`s as ammo. Countered by *bare rooms*.
 - **Metabolize** (Regeneration) — Strain-cheap; the real cost is **time/tempo** against the doom
   clock. Countered by *out-burst* (kill faster than it ticks) and *heal-suppression* tags.
+- **Gamble** (Probability Pull) — no fuel, no medium: draw a fresh `Fortune` hand each battle +
+  spend a `Luck` meter to steer it. The cost is **variance you manage**; pressing your luck burns
+  *tempo* when it backfires. Countered by *determinism* (`Sealed Fate`, fixed-fate enemies).
 
-Plus four cross-cutting systems:
+Plus five cross-cutting systems:
 - **Strain** (capped by Resolve) → **Backlash** when exceeded. Universal.
 - **Forced movement** (`Knockback`, `Launch`, range-collapse) — the positioning layer over range bands.
 - **Stances / modes** (Metal Skin) — a power can put the character into a persistent state tag
@@ -40,6 +43,12 @@ Plus four cross-cutting systems:
   ticks damage; `Regenerating` ticks it back. No special heal path — the engine reuses the DoT
   machinery (duration, stacking, suppression) for healing for free. Heal-suppression tags
   (`Cauterized`, `Corroded`) simply zero out positive ticks in scope.
+- **The Draw / rolled kit** (Probability Pull) — a power's kit need not be fixed. The engine
+  generalizes "kit" from a static list of Expressions into a **distribution sampled per
+  encounter**: at battle start you draw a hand of `Fortune` effects from a pool. Powers become
+  data you can draw from. Design invariant: **no dead entries** — every drawable Fortune is
+  viable, so variance is *direction*, never *quality*. Anti-luck (`Sealed Fate`) suppresses the
+  draw the way heal-suppression zeroes a HoT.
 
 ## Master tag dictionary
 
@@ -53,10 +62,15 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Burning` · `Bleeding` · `Frozen`* · `Chilled`* · `Slowed` · `Rooted` · `Suppressed` ·
 `Staggered` · `Knockback` · `Corroded`* · `Injury` · `Shocked`* · `Guarded` · `Conductive` ·
 `No-Bleed` · `Regenerating` *(first heal-over-time — a signed DoT)* · `Cauterized` ·
-`Grievous` · `Exhausted` · `Downed` · `Toxic`
+`Grievous` · `Exhausted` · `Downed` · `Toxic` · `Lucky`/`Blessed` · `Jinxed` · `Sealed Fate`*
 
 ### Stances / modes
 `Stance:Metal` *(first stance tag — double-edged; see Stances system above)*
+
+### Fortunes (Probability Pull's drawn pool — all viable, different directions)
+`Fortune:Edge` (crit) · `Fortune:Ward` (negate next hit) · `Fortune:Slip` (enemy miss) ·
+`Fortune:Haste` (extra action) · `Fortune:Find` (spawn `Object`/`Charge`) ·
+`Fortune:Mend` (small heal) *(pool is open-ended; these are the seed entries)*
 
 ### Target / body states
 `Oiled` · `Wet` · `Doused` · `Flammable` · `Anchored` · `Heavy`
@@ -77,7 +91,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Generative` · `Ranged` · `Area-Capable` · `Combo-Igniter` · `Sustained` · `Hazard` ·
 `Carry-Gated` · `Material:Cement` · `Charge` · `Encumbrance` · `Control` · `Terrain-Shaper` ·
 `Physical` · `Melee` · `Object-Wielder` · `Range-Collapser` · `Armor-Pierce` · `No-Material` ·
-`Morph` · `Stance-Based` · `Metal` · `Biological` · `Self-Sustain` · `Metabolize`
+`Morph` · `Stance-Based` · `Metal` · `Biological` · `Self-Sustain` · `Metabolize` ·
+`Conceptual` · `Luck` · `Drawn-Kit` · `Fortune` · `Gamble` · `Variance`
 
 ## Combo chains confirmed (cross-power)
 
@@ -103,3 +118,9 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
   counter, mirroring how `Acid` already eats Cement and Metal Skin. One tag, three victims.
 - **Strength/Rend → bleed economy:** `Bleeding` (now owned by Regeneration) is an attrition tag —
   a regenerator wins any bleed war it starts, since it heals the same DoT it inflicts.
+- **Probability Pull → everyone:** the wildcard feeds every kit by chance — `Fortune:Find` spawns
+  an `Object` (Strength ammo) or `Charge` (Cement); `Fortune:Mend` is a borrowed regen tick;
+  `Edge`/`Ward`/rerolls handed to allies (Lend Luck) turn any high-variance play reliable —
+  re-roll a missed Conflagration, guarantee the Mausoleum lands.
+- **Determinism → Probability Pull (counter):** `Sealed Fate`* and fixed-fate bosses suppress the
+  draw the way `Cauterized` stops regen — anti-luck is the gambler's hard counter.
