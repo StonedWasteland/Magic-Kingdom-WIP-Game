@@ -22,7 +22,9 @@ Magic Kingdom Game/
         ├── _format-and-tags.md   ← power spec format + the MASTER TAG DICTIONARY
         ├── 01-pyrokinesis.md
         ├── 02-cement-control.md
-        └── 03-super-strength.md
+        ├── 03-super-strength.md
+        ├── 04-metal-skin.md
+        └── 05-regeneration.md
 ```
 
 When we scaffold actual code, the `client/ server/ shared/ content/` structure from
@@ -52,9 +54,10 @@ A deliberately coherent starting squad with full role coverage:
 | Cement Control | Material | Controller / terrain | ✅ designed |
 | Super Strength | Physical | Melee striker | ✅ designed |
 | Metal Skin | Morph | Tank / frontline | ✅ designed |
-| Regeneration | Biological | Sustain / medic | ⬜ next |
+| Regeneration | Biological | Sustain / medic | ✅ designed |
 
-**Deferred for a later batch:** Probability Pull (luck/conceptual), Blink (spatial).
+**Starter roster complete (5/5).** Next batch — deferred: Probability Pull (luck/conceptual),
+Blink (spatial).
 
 ## Open taxonomy note
 

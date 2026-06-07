@@ -119,11 +119,18 @@ Each power has three layers:
 **Domain** — broad category:
 - Elemental (fire, water, electricity, etc.)
 - Material (cement, metal, plants, etc.)
-- Biological (super strength, regeneration, etc.)
+- Physical (super strength, super speed, raw body output, etc.)
+- Biological (regeneration, healing, life-process manipulation, etc.)
+- Morph (metal skin, elasticity, whole-body transformation, etc.)
 - Conceptual (manipulate luck, gravity, time-in-small-ways, etc.)
-- Kinetic (telekinesis, super speed, force fields, etc.)
+- Kinetic (telekinesis, force fields, etc.)
 - Sensory (heightened senses, telepathy, illusion, etc.)
 - Spatial (teleportation, dimensional pockets, etc.)
+
+*Taxonomy note: the starter roster split the original "Biological" into **Physical** (raw body
+output, e.g. Super Strength) vs **Biological** (life-processes, e.g. Regeneration), and added
+**Morph** (form-alteration, e.g. Metal Skin). These domains emerged bottom-up from designing the
+five starter powers — see `docs/powers/`.*
 
 **Specificity** — how narrow the power is. Narrow powers are stronger but situational:
 - *Pyrokinesis* (broad) vs. *Control of Already-Burning Flames* (narrow, stronger when applicable)

@@ -26,14 +26,20 @@ The engine already supports three distinct ways a power is "fuelled" — an emer
 - **Generate** (Pyrokinesis) — Strain-only. Never runs dry; countered by *denial* (environment).
 - **Carry** (Cement) — Strain **+ Charges** (a carried reserve). Countered by *running out*.
 - **Scavenge** (Super Strength) — Strain + zone `Object`s as ammo. Countered by *bare rooms*.
+- **Metabolize** (Regeneration) — Strain-cheap; the real cost is **time/tempo** against the doom
+  clock. Countered by *out-burst* (kill faster than it ticks) and *heal-suppression* tags.
 
-Plus three cross-cutting systems:
+Plus four cross-cutting systems:
 - **Strain** (capped by Resolve) → **Backlash** when exceeded. Universal.
 - **Forced movement** (`Knockback`, `Launch`, range-collapse) — the positioning layer over range bands.
 - **Stances / modes** (Metal Skin) — a power can put the character into a persistent state tag
   (e.g. `Stance:Metal`) that modifies all their actions and incoming effects until toggled off.
   Stances can be **double-edged**: one toggle applies both buff tags (`Armored`) and
   vulnerability tags (`Conductive`, `Heavy`). Upkeep is a per-turn Strain drain.
+- **Signed DoTs / heal-over-time** (Regeneration) — a periodic effect carries a *sign*. `Burning`
+  ticks damage; `Regenerating` ticks it back. No special heal path — the engine reuses the DoT
+  machinery (duration, stacking, suppression) for healing for free. Heal-suppression tags
+  (`Cauterized`, `Corroded`) simply zero out positive ticks in scope.
 
 ## Master tag dictionary
 
@@ -44,9 +50,10 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Fire` · `Crushing` · `Slashing` · `Piercing` · `Acid`* · `Lightning`*
 
 ### Statuses & DoTs
-`Burning` · `Bleeding`* · `Frozen`* · `Chilled`* · `Slowed` · `Rooted` · `Suppressed` ·
+`Burning` · `Bleeding` · `Frozen`* · `Chilled`* · `Slowed` · `Rooted` · `Suppressed` ·
 `Staggered` · `Knockback` · `Corroded`* · `Injury` · `Shocked`* · `Guarded` · `Conductive` ·
-`No-Bleed`
+`No-Bleed` · `Regenerating` *(first heal-over-time — a signed DoT)* · `Cauterized` ·
+`Grievous` · `Exhausted` · `Downed` · `Toxic`
 
 ### Stances / modes
 `Stance:Metal` *(first stance tag — double-edged; see Stances system above)*
@@ -70,7 +77,7 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Generative` · `Ranged` · `Area-Capable` · `Combo-Igniter` · `Sustained` · `Hazard` ·
 `Carry-Gated` · `Material:Cement` · `Charge` · `Encumbrance` · `Control` · `Terrain-Shaper` ·
 `Physical` · `Melee` · `Object-Wielder` · `Range-Collapser` · `Armor-Pierce` · `No-Material` ·
-`Morph` · `Stance-Based` · `Metal`
+`Morph` · `Stance-Based` · `Metal` · `Biological` · `Self-Sustain` · `Metabolize`
 
 ## Combo chains confirmed (cross-power)
 
@@ -87,3 +94,12 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
   metal-skinned ally. Same shape as fire/water — coordinate or cook your tank.
 - **Lightning (future) → Metal Skin:** `Conductive` makes `Lightning`/`Shocked` the tank's hard
   counter. Pure emergent counterplay from one shared tag.
+- **Regeneration → frontline:** sustain only pays off behind a soak — `Guarded` (Metal Skin) or
+  `Cover` (Strength) buys the turns the HoT needs. Revive (`Downed` → up) refills the line.
+- **Pyro ↔ Regeneration (tension, free from the engine):** `Fire`/`Burning` reads as `Cauterized`
+  and **suppresses `Regenerating`** — same shape as Pyro↔Metal Skin. The kicker: Forge-Heart
+  cauterizing an ally's `Bleeding` *also* shuts off that ally's regen. The medic-fire dilemma.
+- **Acid (future) → Regeneration:** `Corroded` outpaces the tick — rot is the regenerator's hard
+  counter, mirroring how `Acid` already eats Cement and Metal Skin. One tag, three victims.
+- **Strength/Rend → bleed economy:** `Bleeding` (now owned by Regeneration) is an attrition tag —
+  a regenerator wins any bleed war it starts, since it heals the same DoT it inflicts.
