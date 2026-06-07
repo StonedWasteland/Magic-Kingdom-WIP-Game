@@ -53,7 +53,7 @@ luck enter (each wants its own — Might, Wits, etc.).
 | **Resolve** | Strain cap | how much you can spend before Backlash |
 | **Vitality** | HP | how much you can take before `Downed` |
 
-Starting line (dials): **HP 10**, **Resolve 6**, **Focus +1**, **Reflex +0**.
+Starting line (dials): **HP 20**, **Resolve 6**, **Focus +1**, **Reflex +0**.
 
 ## Round structure
 
@@ -87,13 +87,32 @@ power docs) comes later.
 
 ## HP, damage, Downed
 
-Small integer HP (10). Damage in small chunks (Firebolt ~3, Crushing Slam ~4, Burning ~2/round).
-**0 HP → `Downed`** (removed from the slice — no death/bleed-out modelling yet). Both party
-members Downed = loss.
+Health pools are **deliberately large** so no single hit ends anyone — fights are won by
+attrition and control, not burst. This is what makes the combo engine the star: locking an enemy
+and cooking it over rounds beats one big number.
+
+- **HP 20** (party and Raiders alike at MVP scale).
+- Damage in chunks that are a *fraction* of the bar: **Firebolt ~4**, **Crushing Slam ~5**,
+  **Raider hit ~4**, **Burning / On-Fire ~3 per round.** Roughly **5 hits** to drop someone, so
+  positioning and tempo have room to matter.
+- **0 HP → `Downed`** (removed from the slice — no death/bleed-out modelling yet). Both party
+  members Downed = loss.
+
+### Design rule — no one-shots (except the specialist)
+**Baseline: no single hit may remove more than ~⅓ of a target's max HP.** Nobody gets deleted in
+one click; every kill is *built*. Big capstone effects (Conflagration, Wrecking Throw, Jackpot)
+swing fights through **area, DoT, and control** — not one deleting number.
+
+**The exception is the payoff for commitment.** A build that *specializes hard* for burst — a
+narrow power, all-in on damage, sacrificing survivability / utility / range — **can** break the
+⅓ ceiling and one-shot. That's not a hole in the rule; it's the **Specificity axis** (narrow =
+stronger but situational) expressed in the damage layer. The glass cannon earns its glass: fragile,
+situational, resource-hungry, and punished hard the moment the one-shot setup isn't available.
+The one-shot is a *reward you build toward*, never a default anyone carries.
 
 ## The doom clock
 
-A visible counter starting at **6**. −1 each round end. At **0**: the slice is **lost** (stand-in
+A visible counter starting at **5**. −1 each round end. At **0**: the slice is **lost** (stand-in
 for "reinforcements arrive / objective fails"). Its whole job in the MVP is to make **tempo cost
 real** — every turn spent maneuvering is a turn closer to losing, which is the pressure that
 makes the Pyro+Cement *tempo* of "lock it, then burn it" matter.
