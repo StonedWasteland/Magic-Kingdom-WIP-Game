@@ -41,6 +41,11 @@ Plus five cross-cutting systems:
   (e.g. `Stance:Metal`) that modifies all their actions and incoming effects until toggled off.
   Stances can be **double-edged**: one toggle applies both buff tags (`Armored`) and
   vulnerability tags (`Conductive`, `Heavy`). Upkeep is a per-turn Strain drain.
+- **The Arsenal** (Blacksmith) — extends one stance into a **menu** of them. A `Wielding:X` mode
+  equips a *package* of tags (`Wielding:Flameblade` = `Fire`/`Burning`, `Wielding:Maul` =
+  `Crushing`/`Knockback`…); swap to swap your whole kit at a tempo cost. The **deliberate** twin of
+  Probability Pull's `Drawn-Kit` — forge the tool instead of rolling it — and the engine thesis's
+  capstone: a power that assembles *other powers'* tags on demand.
 - **Signed DoTs / heal-over-time** (Regeneration) — a periodic effect carries a *sign*. `Burning`
   ticks damage; `Regenerating` ticks it back. No special heal path — the engine reuses the DoT
   machinery (duration, stacking, suppression) for healing for free. Heal-suppression tags
@@ -115,7 +120,9 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Conceptual` · `Luck` · `Drawn-Kit` · `Fortune` · `Gamble` · `Variance` ·
 `Gravity` · `Pull` *(forced movement toward — inverse of `Knockback`)* · `Singularity` ·
 `Spreading` *(zone growth rule — expands to an adjacent band each round)* ·
-`Cleanse` *(the dispel verb — removes a tag, inverse of applying one)* · `Reveal` *(anti-stealth/concealment)*
+`Cleanse` *(the dispel verb — removes a tag, inverse of applying one)* · `Reveal` *(anti-stealth/concealment)* ·
+`Conjure` *(manifest objects/weapons from will)* · `Arsenal` *(multi-mode loadout — a menu of `Wielding:` modes)* ·
+`Wielding:X` *(weapon mode tags, each a borrowed tag package)*
 
 ## Combo chains confirmed (cross-power)
 

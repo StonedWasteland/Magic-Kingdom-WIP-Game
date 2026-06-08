@@ -57,8 +57,23 @@ A deliberately coherent starting squad with full role coverage:
 | Metal Skin | Morph | Tank / frontline | ✅ designed |
 | Regeneration | Biological | Sustain / medic | ✅ designed |
 
-**Starter roster complete (5/5).** Next batch in progress: Probability Pull (conceptual/luck —
-✅ designed, power 06), Blink (spatial — ⬜ remaining).
+**Starter roster complete (5/5)**, plus power 06 **Probability Pull** (conceptual/luck wildcard).
+
+## The second squad (powers 07–11)
+
+A whole second team, picked one-per-role for a different feel — and a *gather-hold-reap* identity
+where the tank pulls the enemy into one band and everyone else reaps it:
+
+| Power | Domain | Role | Engine concept it mints | Status |
+|-------|--------|------|--------------------------|--------|
+| Gravity Anchor | Conceptual | Tank | `Pull` (forced movement *toward*); `Gravity Well` | ✅ designed |
+| Overgrowth | Biological | Controller | `Spreading` zones (terrain that grows) | ✅ designed |
+| Glasstorm | Material | Artillery | `Shred` (the first amplifier debuff) | ✅ designed |
+| Radiance | Elemental | Support | `Barrier` (shields) + `Cleanse` (dispel) | ✅ designed |
+| Blacksmith | Conceptual | Striker / flex | `Arsenal` (multi-mode weapon loadout) | ✅ designed |
+
+**Deferred to a later batch:** Blink (spatial), Quicksilver / Super Speed (action-economy striker),
+and wiring Probability Pull into play.
 
 ## Open taxonomy note
 
