@@ -105,13 +105,13 @@ const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 let S;
 function newGame(){
   S = {
-    round:1, doom:6, phase:"party", pending:null, over:null,
+    round:1, doom:6, phase:"party", pending:null, over:null, push:false,
     fire:[0,0,0],                                  // On-Fire rounds-left per band
     units:[
       { id:"mason", name:"Mason", role:"Cement",  side:"party", hp:20,max:20,
-        resolve:6, strain:0, focus:1, band:0, st:{}, acted:false, moved:false },
+        resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
       { id:"ember", name:"Ember", role:"Pyro",    side:"party", hp:20,max:20,
-        resolve:6, strain:0, focus:1, band:1, st:{}, acted:false, moved:false,
+        resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false,
         affinity:"fire" },                         // reads On-Fire/Burning as a buff, not damage
       { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16,
         band:1, st:{}, acted:false },
@@ -158,8 +158,9 @@ function check(actor,target,bonusTags){
 
 /* ─── party actions ───────────────────────────────────────────────────────── */
 function slam(actor,target){            // Cement: 10+ Rooted, 7-9 Slowed (teeth)
-  spend(actor,1);
-  const t=check(actor,target);
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
   if(t==="fail"){ log(`  Cement Slam glances off ${target.name}.`,"l-miss"); }
   else if(t==="partial"){ damage(target,4,"Crushing"); setSt(target,"slowed",2);
     log(`  ${target.name} takes 4 + is Slowed (can't advance, −1 to hit).`,"l-part"); }
@@ -168,8 +169,10 @@ function slam(actor,target){            // Cement: 10+ Rooted, 7-9 Slowed (teeth
   finishAction(actor);
 }
 function firebolt(actor,target){        // Pyro: 10+ dmg+Burning, 7-9 dmg only
-  spend(actor,1);
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
   const bonus=[];
+  if(p) bonus.push({name:"Push",n:1});
   if(S.fire[target.band]>0) bonus.push({name:"On-Fire zone",n:1});           // easier to ignite a burning target
   if(actor.affinity==="fire" && S.fire[actor.band]>0) bonus.push({name:"Stoked",n:1}); // firing from within the blaze
   const t=check(actor,target,bonus);
@@ -181,6 +184,7 @@ function firebolt(actor,target){        // Pyro: 10+ dmg+Burning, 7-9 dmg only
   finishAction(actor);
 }
 function scorch(actor,band){            // Pyro: auto — set a band On-Fire
+  S.push=false;                          // no roll to push on an auto action
   spend(actor,1);
   S.fire[band]=2;
   log(`${actor.name} sets the ${BANDS[band]} band ABLAZE — On-Fire for 2 rounds (3/round to anything standing in it).`,"l-fire");
@@ -202,7 +206,7 @@ function activeActor(){ return party().find(u=>alive(u)&&!u.acted) || null; }
 
 function finishAction(actor){
   actor.acted=true;
-  S.pending=null;
+  S.pending=null; S.push=false;
   if(!activeActor()){ render(); setTimeout(enemyTurn,450); }   // party done → enemies
   else render();
 }
@@ -361,6 +365,7 @@ function render(){
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2));
+  b.push(`<button class="${S.push?"primary":"ghost"}" onclick="togglePush()" title="Spend 1 Strain for +1 to your next check">Push ${S.push?"ON":"OFF"} · +1 / +1 Strain</button>`);
   b.push(`<button class="ghost" onclick="passTurn()">Skip action</button>`);
   acts.innerHTML=b.join("");
   hint.textContent="Tip: Root a Raider at Near, then Scorch the Near band — Ember stands in her own fire (Stoked +1, unburned) while it cooks the pinned enemy.";
@@ -376,6 +381,7 @@ function arm(kind){
   render();
 }
 function cancel(){ S.pending=null; render(); }
+function togglePush(){ if(!S.over && S.phase==="party"){ S.push=!S.push; render(); } }
 function passTurn(){ const a=activeActor(); if(a){ log(`${a.name} holds.`,"l-miss"); finishAction(a); } }
 function pick(arg){
   if(!S.pending) return;

@@ -53,7 +53,18 @@ luck enter (each wants its own — Might, Wits, etc.).
 | **Resolve** | Strain cap | how much you can spend before Backlash |
 | **Vitality** | HP | how much you can take before `Downed` |
 
-Starting line (dials): **HP 20**, **Resolve 6**, **Focus +1**, **Reflex +0**.
+Starting line (dials): **HP 20**, **Resolve 6**, **Focus +2**, **Reflex +0**.
+
+At **Focus +2** a check lands **~42% full / ~42% partial / ~17% fail** — failures are uncommon and
+you usually accomplish *something*. (At +1 the bell curve was punishing: ~28% full, ~28% whiff.)
+**Push** — spend +1 Strain for +1 to the roll — lets you buy into ~58% full odds when a check
+matters, at the cost of creeping toward Backlash. It's the lever that makes the Strain economy
+bite, and a first taste of Probability Pull's identity.
+
+We chose **2d6 over d20 deliberately:** on a bell curve each ±1 modifier shifts a lot of
+probability, so every tag in scope matters — which *amplifies* the tag-stacking/combo play the
+whole game is built on. d20's flat 5%-per-point would mute exactly that. The "feels low" we hit in
+playtest was a too-low base modifier, not a flaw in 2d6 — fixed by the +2 base, not by changing dice.
 
 ## Round structure
 
