@@ -59,6 +59,10 @@ Plus five cross-cutting systems:
   other source.** `Shred` is stacking defense-reduction: a `Shred N` target takes more from *all*
   incoming damage (every ally, every DoT, every zone). The first force-multiplier — resolution reads
   the target's `Shred` stacks as a damage-taken modifier. The clean answer to `Armored` tanks.
+- **Shields & Cleanse** (Radiance) — two more verbs. A **`Barrier`** is preventive HP: a separate
+  pool that soaks damage *before* the body and drains as it does (distinct from heal = after, armor =
+  per-hit). Damage routes through `Barrier` first. **`Cleanse`** is the **dispel** — it *removes* a
+  tag (`Burning`/`Shred`/`Slowed`…), the inverse of every apply-a-tag effect; the answer to debuffers.
 
 ## Master tag dictionary
 
@@ -66,7 +70,7 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 (fully defined) by a power not yet written.
 
 ### Damage types
-`Fire` · `Crushing` · `Slashing` · `Piercing` · `Acid`* · `Lightning`*
+`Fire` · `Crushing` · `Slashing` · `Piercing` · `Light` · `Acid`* · `Lightning`*
 
 ### Statuses & DoTs
 `Burning` · `Bleeding` · `Frozen`* · `Chilled`* · `Slowed` · `Rooted` · `Suppressed` ·
@@ -89,7 +93,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Oiled` · `Wet` · `Doused` · `Flammable` · `Anchored` · `Heavy`
 
 ### Position & defense
-`Cover` · `Armored` · `Entrenched` · `Destructible Terrain` · `Sealed`
+`Cover` · `Armored` · `Entrenched` · `Destructible Terrain` · `Sealed` ·
+`Barrier` *(absorption pool — soaks damage before HP; third defensive layer beside heal & armor)*
 
 ### Zone tags
 `On-Fire` · `Water Source` · `Rain` · `Open Sky` · `Enclosed` · `Plant-Rich` ·
@@ -109,7 +114,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Morph` · `Stance-Based` · `Metal` · `Biological` · `Self-Sustain` · `Metabolize` ·
 `Conceptual` · `Luck` · `Drawn-Kit` · `Fortune` · `Gamble` · `Variance` ·
 `Gravity` · `Pull` *(forced movement toward — inverse of `Knockback`)* · `Singularity` ·
-`Spreading` *(zone growth rule — expands to an adjacent band each round)*
+`Spreading` *(zone growth rule — expands to an adjacent band each round)* ·
+`Cleanse` *(the dispel verb — removes a tag, inverse of applying one)* · `Reveal` *(anti-stealth/concealment)*
 
 ## Combo chains confirmed (cross-power)
 
