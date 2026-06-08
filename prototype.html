@@ -45,6 +45,7 @@
   .chip.burning{color:var(--ember);border-color:var(--ember)}
   .chip.stagger{color:var(--warn);border-color:var(--warn)}
   .chip.fire{color:var(--ember);border-color:var(--ember);background:#2a1a0e}
+  .chip.stoked{color:var(--good);border-color:var(--good);background:#0e2417}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:14px}
   .panel h3{margin:0 0 8px;font-size:13px}
   .acts{display:flex;gap:8px;flex-wrap:wrap}
@@ -110,7 +111,8 @@ function newGame(){
       { id:"mason", name:"Mason", role:"Cement",  side:"party", hp:20,max:20,
         resolve:6, strain:0, focus:1, band:0, st:{}, acted:false, moved:false },
       { id:"ember", name:"Ember", role:"Pyro",    side:"party", hp:20,max:20,
-        resolve:6, strain:0, focus:1, band:1, st:{}, acted:false, moved:false },
+        resolve:6, strain:0, focus:1, band:1, st:{}, acted:false, moved:false,
+        affinity:"fire" },                         // reads On-Fire/Burning as a buff, not damage
       { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:20,max:20,
         band:1, st:{}, acted:false },
       { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:20,max:20,
@@ -167,8 +169,9 @@ function slam(actor,target){            // Cement: 10+ Rooted, 7-9 Slowed (teeth
 }
 function firebolt(actor,target){        // Pyro: 10+ dmg+Burning, 7-9 dmg only
   spend(actor,1);
-  const onFire = S.fire[target.band]>0;
-  const bonus = onFire ? [{name:"On-Fire zone",n:1}] : [];
+  const bonus=[];
+  if(S.fire[target.band]>0) bonus.push({name:"On-Fire zone",n:1});           // easier to ignite a burning target
+  if(actor.affinity==="fire" && S.fire[actor.band]>0) bonus.push({name:"Stoked",n:1}); // firing from within the blaze
   const t=check(actor,target,bonus);
   if(t==="fail"){ log(`  Firebolt sputters past ${target.name}.`,"l-miss"); }
   else if(t==="partial"){ damage(target,3,"Fire");
@@ -247,13 +250,18 @@ function enemyAttack(e){
 
 function endOfRound(){
   log("— end of round —","l-round");
-  // a. DoTs
+  // a. DoTs  (fire affinity = immune; the flames can't burn the firestarter)
   S.units.filter(alive).forEach(u=>{
-    if(u.st.burning){ damage(u,3,"Burning"); log(`  ${u.name} burns for 3.`,"l-fire"); }
+    if(u.st.burning){
+      if(u.affinity==="fire"){ u.st.burning=0; return; }
+      damage(u,3,"Burning"); log(`  ${u.name} burns for 3.`,"l-fire"); }
   });
   // b. On-Fire zones (the combo: a Rooted unit can't leave the band it's cooking in)
   S.units.filter(alive).forEach(u=>{
-    if(S.fire[u.band]>0){ damage(u,3,"the On-Fire zone");
+    if(S.fire[u.band]>0){
+      if(u.affinity==="fire"){
+        log(`  ${u.name} stands in the blaze at ${BANDS[u.band]} — Stoked, not burned.`,"l-fire"); return; }
+      damage(u,3,"the On-Fire zone");
       const pin = u.st.rooted ? " — Rooted, nowhere to run" : "";
       log(`  ${u.name} stands in fire at ${BANDS[u.band]}: 3${pin}.`,"l-fire"); }
   });
@@ -293,7 +301,9 @@ function unitCard(u){
   if(u.st.slowed)  chips.push(`<span class="chip slowed">Slowed ${u.st.slowed}</span>`);
   if(u.st.burning) chips.push(`<span class="chip burning">Burning ${u.st.burning}</span>`);
   if(u.st.stagger) chips.push(`<span class="chip stagger">Staggered</span>`);
-  if(alive(u) && S.fire[u.band]>0) chips.push(`<span class="chip fire">🔥 in fire</span>`);
+  if(alive(u) && S.fire[u.band]>0) chips.push(u.affinity==="fire"
+    ? `<span class="chip stoked">🔥 Stoked +1</span>`
+    : `<span class="chip fire">🔥 in fire</span>`);
   const click = tgtable ? `onclick="pick('${u.id}')"` : "";
   return `<div class="${cls.join(" ")}" ${click}>
     <span class="band">${alive(u)?BANDS[u.band]:"—"}</span>
@@ -353,7 +363,7 @@ function render(){
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2));
   b.push(`<button class="ghost" onclick="passTurn()">Skip action</button>`);
   acts.innerHTML=b.join("");
-  hint.textContent="Tip: Slam to Root a Raider at Near, then Scorch the Near band. Watch what the unrooted one does.";
+  hint.textContent="Tip: Root a Raider at Near, then Scorch the Near band — Ember stands in her own fire (Stoked +1, unburned) while it cooks the pinned enemy.";
 }
 function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
 

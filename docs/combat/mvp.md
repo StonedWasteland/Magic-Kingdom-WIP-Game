@@ -117,6 +117,16 @@ for "reinforcements arrive / objective fails"). Its whole job in the MVP is to m
 real** — every turn spent maneuvering is a turn closer to losing, which is the pressure that
 makes the Pyro+Cement *tempo* of "lock it, then burn it" matter.
 
+## Affinity — same tag, opposite meaning by reader
+
+A unit can carry an **affinity** that flips how it reads a tag. The Pyromancer has **fire
+affinity**: `On-Fire` and `Burning` don't damage her — she's *immune*, and standing in an
+On-Fire band makes her **Stoked** (+1 to her fire checks). It's the inverse of Metal Skin's
+`Conductive` (which makes `Lightning` hurt *more*): the same tag, read as a buff by one unit and a
+threat by another, with **no special-casing** — the effect just queries the reader's affinity.
+Mason, no affinity, still cooks in the fire — so "don't park the cement-mage in the inferno" stays
+a real positioning decision, consistent with the Pyro-hurts-allies tension in the power docs.
+
 ## The proof — what a winning line looks like
 
 The slice exists to make this sequence *emerge*, not be scripted:
