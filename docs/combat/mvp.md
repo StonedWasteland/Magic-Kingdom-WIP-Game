@@ -149,6 +149,17 @@ and *make it not hurt* (`Armored`). Mason and Ember then operate untouched. The 
 setup actions plus an ongoing Strain drain — so turtling forever isn't free. Added a third Raider
 so the aggro actually matters: one body can't bottleneck three attackers, but one *taunt* can.
 
+## Medic & signed DoTs — healing as negative damage
+
+Wren (Regeneration) proves the **signed-DoT** claim in running code: `Regenerating` is `Burning`
+with the sign flipped — *same tick loop*, it just adds HP instead of subtracting. No separate heal
+system. **Graft** applies it to an ally (or **revives** a Downed one to 6 HP); **Mend Self** turns
+it inward; **Rend** opens a `Bleeding` DoT (the attrition the regenerator wins, since she out-heals
+what she inflicts). The documented counter shows up for free: a unit that's `Burning` or standing
+in an On-Fire band is **Cauterized** — its `Regenerating` is suppressed that round. So keep the
+medic out of Ember's fire, and the tank+healer pairing (Wren tops up Steele while he soaks the
+taunt) just *works* — two powers' tags interacting with nothing special-cased between them.
+
 ## The proof — what a winning line looks like
 
 The slice exists to make this sequence *emerge*, not be scripted:

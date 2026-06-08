@@ -48,6 +48,8 @@
   .chip.stoked{color:var(--good);border-color:var(--good);background:#0e2417}
   .chip.armor{color:#9fb4d0;border-color:#9fb4d0;background:#161a22}
   .chip.taunt{color:#ff9d5c;border-color:#ff9d5c}
+  .chip.regen{color:var(--good);border-color:var(--good)}
+  .chip.bleed{color:var(--enemy);border-color:var(--enemy)}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:14px}
   .panel h3{margin:0 0 8px;font-size:13px}
   .acts{display:flex;gap:8px;flex-wrap:wrap}
@@ -74,7 +76,7 @@
 <div class="sub">2d6 · 10+ full / 7–9 partial / 6− fail · lock it, then burn it · prove the tags talk.</div>
 
 <div class="topbar">
-  <div class="doom">DOOM <b id="doom">6</b> &nbsp;<span class="pip" id="doompips"></span></div>
+  <div class="doom">DOOM <b id="doom">7</b> &nbsp;<span class="pip" id="doompips"></span></div>
   <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
 </div>
 
@@ -107,7 +109,7 @@ const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 let S;
 function newGame(){
   S = {
-    round:1, doom:6, phase:"party", pending:null, over:null, push:false,
+    round:1, doom:7, phase:"party", pending:null, over:null, push:false,
     fire:[0,0,0],                                  // On-Fire rounds-left per band
     units:[
       { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22,
@@ -118,16 +120,20 @@ function newGame(){
       { id:"ember", name:"Ember", role:"Pyro",    side:"party", hp:20,max:20,
         resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false,
         affinity:"fire" },                         // reads On-Fire/Burning as a buff, not damage
+      { id:"wren", name:"Wren", role:"Regen", side:"party", hp:18,max:18,
+        resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
       { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16,
         band:1, st:{}, acted:false },
       { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16,
         band:1, st:{}, acted:false },
       { id:"r3", name:"Raider C", role:"melee", side:"enemy", hp:16,max:16,
         band:2, st:{}, acted:false },              // starts Far — staggered arrival
+      { id:"r4", name:"Raider D", role:"melee", side:"enemy", hp:16,max:16,
+        band:2, st:{}, acted:false },
     ],
   };
   document.getElementById("log").innerHTML = "";
-  log("A fresh fight. Three Raiders close in. Steele can Taunt them onto his armored body while Mason locks one in Ember's fire.", "l-round");
+  log("A fresh fight. Four Raiders close in. Steele taunts and tanks, Mason & Ember run the fire combo, and Wren keeps the wounded standing — heal the tank, revive the fallen.", "l-round");
   render();
 }
 
@@ -220,6 +226,33 @@ function sledge(actor,target){           // Metal Skin offense: Crushing + Stagg
     log(`  ${target.name} takes ${d} Crushing + Staggered.`,"l-hit"); }
   finishAction(actor);
 }
+function graft(actor,target){            // Regeneration support: heal an ally, or revive a Downed one
+  spend(actor,2);
+  if(!alive(target)){                     // revive (target.hp === 0)
+    target.hp=6; target.st.down=false;
+    log(`${actor.name} grafts living tissue into ${target.name} — REVIVED at 6 HP.`,"l-hit");
+  } else {
+    setSt(target,"regen",3);              // Regenerating: a signed DoT — heal 3/round for 3 rounds
+    log(`${actor.name} knits ${target.name}'s wounds — Regenerating (3/round, 3 rounds).`,"l-hit");
+  }
+  finishAction(actor);
+}
+function mendSelf(actor){                 // Regeneration defense: turn the gift inward
+  spend(actor,1);
+  setSt(actor,"regen",3);
+  log(`${actor.name} turns the gift inward — Regenerating (3/round, 3 rounds).`,"l-hit");
+  finishAction(actor);
+}
+function rend(actor,target){             // Regeneration offense: Slashing + Bleeding (the bleed war)
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s claws rake harmlessly off ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,3,"Slashing"); log(`  ${target.name} takes 3 Slashing.`,"l-part"); }
+  else { damage(target,3,"Slashing"); setSt(target,"bleeding",3);
+    log(`  ${target.name} takes 3 Slashing + is BLEEDING (2/round).`,"l-hit"); }
+  finishAction(actor);
+}
 
 function spend(actor,n){
   actor.strain+=n;
@@ -255,7 +288,7 @@ function promptParty(){
 function checkEnd(){
   if(S.over) return true;
   if(!liveEnemies().length){ finish("win"); return true; }
-  if(!liveParty().length){ finish("lose","Both Gifted are down."); return true; }
+  if(!liveParty().length){ finish("lose","Your party is down."); return true; }
   return false;
 }
 
@@ -308,11 +341,20 @@ function enemyAttack(e){
 
 function endOfRound(){
   log("— end of round —","l-round");
-  // a. DoTs  (fire affinity = immune; the flames can't burn the firestarter)
+  // a. Signed DoTs — one engine: Burning/Bleeding tick HP down, Regenerating ticks it up.
   S.units.filter(alive).forEach(u=>{
     if(u.st.burning){
-      if(u.affinity==="fire"){ u.st.burning=0; return; }
-      damage(u,3,"Burning"); log(`  ${u.name} burns for 3.`,"l-fire"); }
+      if(u.affinity==="fire"){ u.st.burning=0; }     // the flames can't burn the firestarter
+      else { damage(u,3,"Burning"); log(`  ${u.name} burns for 3.`,"l-fire"); }
+    }
+    if(u.st.bleeding){ damage(u,2,"Bleeding"); log(`  ${u.name} bleeds for 2.`,"l-bad"); }
+    if(u.st.regen){
+      // Cauterized: fire (a Burning tag, or standing in an On-Fire band) sears wounds shut → no heal
+      const cauterized = u.st.burning>0 || (S.fire[u.band]>0 && u.affinity!=="fire");
+      if(cauterized){ log(`  ${u.name}'s wounds are Cauterized by fire — Regenerating suppressed.`,"l-fire"); }
+      else { const b=u.hp; u.hp=Math.min(u.max,u.hp+3);
+        if(u.hp>b) log(`  ${u.name} regenerates ${u.hp-b}.`,"l-hit"); }
+    }
   });
   // b. On-Fire zones (the combo: a Rooted unit can't leave the band it's cooking in)
   S.units.filter(alive).forEach(u=>{
@@ -332,12 +374,12 @@ function endOfRound(){
   });
   // d. tick durations (stagger is consumed on use, not here)
   S.fire=S.fire.map(n=>Math.max(0,n-1));
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting"].forEach(k=>{
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });
 
   // win/lose
   if(!liveEnemies().length){ return finish("win"); }
-  if(!liveParty().length){ return finish("lose","Both Gifted are down."); }
+  if(!liveParty().length){ return finish("lose","Your party is down."); }
   S.doom--;
   if(S.doom<=0){ return finish("lose","The doom clock ran out — reinforcements arrive."); }
 
@@ -356,7 +398,10 @@ function finish(result,why){
 
 /* ─── render ──────────────────────────────────────────────────────────────── */
 function unitCard(u){
-  const tgtable = S.pending && S.pending.targets==="enemy" && u.side==="enemy" && alive(u);
+  const tgtable = S.pending && (
+    (S.pending.targets==="enemy" && u.side==="enemy" && alive(u)) ||
+    (S.pending.targets==="ally"  && u.side==="party")          // includes Downed allies (for revive)
+  );
   const cls=["card",u.side==="party"?"party":"enemy"];
   if(!alive(u)) cls.push("down");
   if(S.phase==="party" && !S.over && activeActor()===u) cls.push("active");
@@ -369,6 +414,8 @@ function unitCard(u){
     if(u.st.stagger) chips.push(`<span class="chip stagger">Staggered</span>`);
     if(u.stance) chips.push(`<span class="chip armor">⛨ Metal · Armored</span>`);
     if(u.st.taunting) chips.push(`<span class="chip taunt">⚑ Taunting ${u.st.taunting}</span>`);
+    if(u.st.regen) chips.push(`<span class="chip regen">✚ Regenerating ${u.st.regen}</span>`);
+    if(u.st.bleeding) chips.push(`<span class="chip bleed">🩸 Bleeding ${u.st.bleeding}</span>`);
     if(S.fire[u.band]>0) chips.push(u.affinity==="fire"
       ? `<span class="chip stoked">🔥 Stoked +1</span>`
       : `<span class="chip fire">🔥 in fire</span>`);
@@ -414,6 +461,8 @@ function render(){
     } else {
       hint.textContent=S.pending.type==="slam" ? "Click a Raider at Engaged or Near to Slam."
         : S.pending.type==="sledge" ? "Click a Raider at Engaged or Near to Sledge."
+        : S.pending.type==="rend" ? "Click a Raider at Engaged or Near to Rend."
+        : S.pending.type==="graft" ? "Click an ally to heal — or a Downed ally to revive."
         : "Click any Raider to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -431,6 +480,10 @@ function render(){
     b.push(`<button class="${a.stance?"primary":""}" onclick="stanceToggle(U('${a.id}'))">${a.stance?"Drop Metal":"Stance: Metal"}</button>`);
     b.push(btn("Taunt", `taunt(U('${a.id}'))`, a.st.taunting>0));
     b.push(btn("Sledge","arm('sledge')"));
+  } else if(a.role==="Regen"){
+    b.push(btn("Graft (heal / revive)","arm('graft')"));
+    b.push(btn("Mend Self",`mendSelf(U('${a.id}'))`));
+    b.push(btn("Rend","arm('rend')"));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance));
@@ -438,7 +491,9 @@ function render(){
   b.push(`<button class="ghost" onclick="passTurn()">Skip action</button>`);
   acts.innerHTML=b.join("");
   hint.textContent=a.role==="Metal"
-    ? "Tank line: Stance: Metal to armor up, then Taunt to pull all three Raiders onto you — Mason & Ember work free while you soak."
+    ? "Tank line: Stance: Metal to armor up, then Taunt to pull the Raiders onto you — the others work free while you soak."
+    : a.role==="Regen"
+    ? "Medic line: Graft a Regenerating heal onto Steele as he soaks (or revive a Downed ally). Keep your healer out of Ember's fire — it Cauterizes regen."
     : "Tip: Root a Raider at Near, then Scorch that band — Ember stands in her own fire (Stoked +1) while it cooks the pinned enemy.";
 }
 function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
@@ -450,6 +505,8 @@ function arm(kind){
   if(kind==="fire")   S.pending={type:"fire",actor:a.id,targets:"enemy"};
   if(kind==="scorch") S.pending={type:"scorch",actor:a.id};
   if(kind==="sledge") S.pending={type:"sledge",actor:a.id,targets:"enemy"};
+  if(kind==="rend")   S.pending={type:"rend",actor:a.id,targets:"enemy"};
+  if(kind==="graft")  S.pending={type:"graft",actor:a.id,targets:"ally"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -460,6 +517,7 @@ function pick(arg){
   const a=U(S.pending.actor); const type=S.pending.type;
   if(type==="scorch"){ scorch(a,arg); return; }
   const target=U(arg);
+  if(type==="graft"){ graft(a,target); return; }   // ally target (may be Downed)
   if(type==="slam"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Cement Slam only hits Engaged or Near."; return; }
     slam(a,target);
@@ -467,6 +525,9 @@ function pick(arg){
   else if(type==="sledge"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Sledge hits Engaged or Near."; return; }
     sledge(a,target);
+  } else if(type==="rend"){
+    if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Rend hits Engaged or Near."; return; }
+    rend(a,target);
   }
 }
 
