@@ -34,7 +34,9 @@ The engine already supports three distinct ways a power is "fuelled" — an emer
 
 Plus five cross-cutting systems:
 - **Strain** (capped by Resolve) → **Backlash** when exceeded. Universal.
-- **Forced movement** (`Knockback`, `Launch`, range-collapse) — the positioning layer over range bands.
+- **Forced movement** (`Knockback`/`Launch` = *away*, `Pull` = *toward*, range-collapse) — the
+  positioning layer over range bands. Atlas pushes; Gravity Anchor pulls; both just move a unit a
+  band. Resisted by `Anchored`.
 - **Stances / modes** (Metal Skin) — a power can put the character into a persistent state tag
   (e.g. `Stance:Metal`) that modifies all their actions and incoming effects until toggled off.
   Stances can be **double-edged**: one toggle applies both buff tags (`Armored`) and
@@ -83,7 +85,7 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `On-Fire` · `Water Source` · `Rain` · `Open Sky` · `Enclosed` · `Plant-Rich` ·
 `Metal Structures` · `Gas` · `Cement Source` · `Rubble` · `Concrete` · `Urban` · `Chasm` ·
 `Flooding` · `Warehouse` · `Featureless` · `Unstable` · `Fragile` · `Submerged` ·
-`Collapse` · `Barred` · `Locked` · `Electrified`* · `Hazard`
+`Collapse` · `Barred` · `Locked` · `Electrified`* · `Hazard` · `Gravity Well` *(pulls + weighs each round)*
 
 ### Objects (for scavenge/throw)
 `Object` · `Mass` · `Car` · `Lamppost` · `Debris`
@@ -93,7 +95,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Carry-Gated` · `Material:Cement` · `Charge` · `Encumbrance` · `Control` · `Terrain-Shaper` ·
 `Physical` · `Melee` · `Object-Wielder` · `Range-Collapser` · `Armor-Pierce` · `No-Material` ·
 `Morph` · `Stance-Based` · `Metal` · `Biological` · `Self-Sustain` · `Metabolize` ·
-`Conceptual` · `Luck` · `Drawn-Kit` · `Fortune` · `Gamble` · `Variance`
+`Conceptual` · `Luck` · `Drawn-Kit` · `Fortune` · `Gamble` · `Variance` ·
+`Gravity` · `Pull` *(forced movement toward — inverse of `Knockback`)* · `Singularity`
 
 ## Combo chains confirmed (cross-power)
 
@@ -125,3 +128,7 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
   re-roll a missed Conflagration, guarantee the Mausoleum lands.
 - **Determinism → Probability Pull (counter):** `Sealed Fate`* and fixed-fate bosses suppress the
   draw the way `Cauterized` stops regen — anti-luck is the gambler's hard counter.
+- **Gravity Anchor → zone-makers (the gather-and-reap engine):** `Pull` drags the enemy force into
+  one band; whoever owns that band's hazard reaps. Drag foes into Glasstorm's shred, Overgrowth's
+  roots, or a fire zone — gravity gathers, terrain kills. `Heavy`/clustered targets also can't dodge
+  AoE or beams. The signature pairing of the second squad.
