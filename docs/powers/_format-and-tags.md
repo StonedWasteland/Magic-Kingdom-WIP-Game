@@ -55,6 +55,10 @@ Plus five cross-cutting systems:
   `Gravity Well`) sit where placed and tick down; an `Overgrown` zone carries a **growth rule** and
   **propagates to an adjacent band each round**. The engine re-evaluates zones per round and lets
   them expand — terrain with momentum. Countered by *denial* (barren ground) and *fire* (burns it).
+- **Amplifiers** (Glasstorm's `Shred`) — a tag that does nothing itself but **multiplies every
+  other source.** `Shred` is stacking defense-reduction: a `Shred N` target takes more from *all*
+  incoming damage (every ally, every DoT, every zone). The first force-multiplier — resolution reads
+  the target's `Shred` stacks as a damage-taken modifier. The clean answer to `Armored` tanks.
 
 ## Master tag dictionary
 
@@ -70,7 +74,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `No-Bleed` · `Regenerating` *(first heal-over-time — a signed DoT)* · `Cauterized` ·
 `Grievous` · `Exhausted` · `Downed` · `Toxic` · `Lucky`/`Blessed` · `Jinxed` · `Sealed Fate`* ·
 `Taunting` *(aggro — enemy target-selection is forced onto the taunter; first surfaced in the combat MVP)* ·
-`Entangled` *(`Rooted` + a constricting DoT)* · `Thorns` *(retaliation — strikers eat damage)*
+`Entangled` *(`Rooted` + a constricting DoT)* · `Thorns` *(retaliation — strikers eat damage)* ·
+`Shred` *(AMPLIFIER — stacking −armor; target takes more from all sources)* · `Blinded` *(accuracy penalty)*
 
 ### Stances / modes
 `Stance:Metal` *(first stance tag — double-edged; see Stances system above)*
@@ -91,10 +96,11 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Metal Structures` · `Gas` · `Cement Source` · `Rubble` · `Concrete` · `Urban` · `Chasm` ·
 `Flooding` · `Warehouse` · `Featureless` · `Unstable` · `Fragile` · `Submerged` ·
 `Collapse` · `Barred` · `Locked` · `Electrified`* · `Hazard` · `Gravity Well` *(pulls + weighs each round)* ·
-`Overgrown` *(spreading — propagates to an adjacent band each round)*
+`Overgrown` *(spreading — propagates to an adjacent band each round)* ·
+`Glasstorm` *(abrasive DoT + `Slowed` + `Blinded`; intensifies over rounds)*
 
 ### Objects (for scavenge/throw)
-`Object` · `Mass` · `Car` · `Lamppost` · `Debris`
+`Object` · `Mass` · `Car` · `Lamppost` · `Debris` · `Sand` · `Glass`
 
 ### Mechanical / intrinsic
 `Generative` · `Ranged` · `Area-Capable` · `Combo-Igniter` · `Sustained` · `Hazard` ·
