@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Magic Worlds — Combat Slice (MVP)</title>
+<style>
+  :root{
+    --bg:#14161c; --panel:#1d2029; --ink:#e7e9ee; --dim:#8b90a0;
+    --party:#4ea1ff; --enemy:#ff5d5d; --ember:#ff8a3d; --root:#b07cff;
+    --good:#57d98a; --warn:#ffd25a; --line:#2c3040;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif;padding:16px}
+  h1{font-size:18px;margin:0 0 2px}
+  .sub{color:var(--dim);font-size:12px;margin-bottom:12px}
+  .topbar{display:flex;gap:18px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .doom{font-size:13px;background:var(--panel);border:1px solid var(--line);
+    padding:6px 12px;border-radius:8px}
+  .doom b{color:var(--enemy);font-size:16px}
+  .pip{color:var(--warn)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .col h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;margin-bottom:10px;position:relative}
+  .card.party{border-left:3px solid var(--party)}
+  .card.enemy{border-left:3px solid var(--enemy)}
+  .card.active{outline:2px solid var(--party);outline-offset:1px}
+  .card.targetable{cursor:pointer;outline:2px dashed var(--ember);outline-offset:1px}
+  .card.targetable:hover{background:#262a36}
+  .card.down{opacity:.4;filter:grayscale(1)}
+  .name{font-weight:600}
+  .name small{color:var(--dim);font-weight:400}
+  .band{float:right;font-size:11px;color:var(--dim);border:1px solid var(--line);
+    border-radius:6px;padding:1px 7px}
+  .hpwrap{height:14px;background:#0d0f14;border-radius:7px;overflow:hidden;margin:7px 0 4px;border:1px solid var(--line)}
+  .hp{height:100%;background:linear-gradient(90deg,#3a7d4f,var(--good));transition:width .25s}
+  .enemy .hp{background:linear-gradient(90deg,#7d3a3a,var(--enemy))}
+  .hpnum{font-size:11px;color:var(--dim)}
+  .chips{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;min-height:4px}
+  .chip{font-size:10px;padding:1px 7px;border-radius:10px;border:1px solid var(--line)}
+  .chip.rooted{color:var(--root);border-color:var(--root)}
+  .chip.slowed{color:#7ad0ff;border-color:#7ad0ff}
+  .chip.burning{color:var(--ember);border-color:var(--ember)}
+  .chip.stagger{color:var(--warn);border-color:var(--warn)}
+  .chip.fire{color:var(--ember);border-color:var(--ember);background:#2a1a0e}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:14px}
+  .panel h3{margin:0 0 8px;font-size:13px}
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:#2b3242;color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:8px 13px;font-size:13px;cursor:pointer}
+  button:hover:not(:disabled){background:#39435a;border-color:var(--party)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.ghost{background:transparent}
+  button.primary{background:var(--party);color:#06243f;border-color:var(--party);font-weight:600}
+  .hint{color:var(--ember);font-size:12px;margin-top:8px;min-height:16px}
+  .bandbtns{display:flex;gap:8px;margin-top:8px}
+  #log{background:#0d0f14;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    height:190px;overflow:auto;font:12px/1.55 ui-monospace,Consolas,monospace}
+  #log div{margin:0 0 2px}
+  .l-hit{color:var(--good)} .l-part{color:var(--warn)} .l-miss{color:var(--dim)}
+  .l-fire{color:var(--ember)} .l-root{color:var(--root)} .l-bad{color:var(--enemy)}
+  .l-round{color:#fff;border-top:1px solid var(--line);margin-top:6px;padding-top:4px}
+  .win{font-size:16px;font-weight:600}
+  .win.w{color:var(--good)} .win.l{color:var(--enemy)}
+</style>
+</head>
+<body>
+<h1>Magic Worlds — Combat Slice <small style="color:var(--dim)">MVP</small></h1>
+<div class="sub">2d6 · 10+ full / 7–9 partial / 6− fail · lock it, then burn it · prove the tags talk.</div>
+
+<div class="topbar">
+  <div class="doom">DOOM <b id="doom">5</b> &nbsp;<span class="pip" id="doompips"></span></div>
+  <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
+</div>
+
+<div class="cols">
+  <div class="col"><h2>Your party</h2><div id="party"></div></div>
+  <div class="col"><h2>Raiders</h2><div id="enemies"></div></div>
+</div>
+
+<div class="panel" id="control">
+  <h3 id="ctrlhead">—</h3>
+  <div class="acts" id="acts"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div id="log"></div>
+
+<script>
+"use strict";
+/* ─── Magic Worlds combat slice ──────────────────────────────────────────────
+   One self-contained encounter that tests the engine thesis: tags reading tags.
+   No framework. Re-render the whole board from `S` after every change.
+   Resolution: 2d6 + mods vs FIXED thresholds (10+/7-9/6-). Every tag in scope
+   is just a +/-1, so a combo is the sum of the tags present.                  */
+
+const BANDS = ["Engaged","Near","Far"];           // index 0..2 = distance from front
+const roll2 = () => { const a=1+Math.floor(Math.random()*6),
+                            b=1+Math.floor(Math.random()*6); return {a,b,sum:a+b}; };
+const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
+
+let S;
+function newGame(){
+  S = {
+    round:1, doom:5, phase:"party", pending:null, over:null,
+    fire:[0,0,0],                                  // On-Fire rounds-left per band
+    units:[
+      { id:"mason", name:"Mason", role:"Cement",  side:"party", hp:20,max:20,
+        resolve:6, strain:0, focus:1, band:0, st:{}, acted:false, moved:false },
+      { id:"ember", name:"Ember", role:"Pyro",    side:"party", hp:20,max:20,
+        resolve:6, strain:0, focus:1, band:1, st:{}, acted:false, moved:false },
+      { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:20,max:20,
+        band:1, st:{}, acted:false },
+      { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:20,max:20,
+        band:1, st:{}, acted:false },
+    ],
+  };
+  document.getElementById("log").innerHTML = "";
+  log("A fresh fight. Two Raiders close from Near. Lock one in the fire — let the other learn why that matters.", "l-round");
+  render();
+}
+
+/* ─── helpers ─────────────────────────────────────────────────────────────── */
+const U   = id => S.units.find(u=>u.id===id);
+const alive = u => u.hp>0;
+const party = () => S.units.filter(u=>u.side==="party");
+const enemies = () => S.units.filter(u=>u.side==="enemy");
+const liveEnemies = () => enemies().filter(alive);
+const liveParty   = () => party().filter(alive);
+
+function log(msg,cls){ const d=document.createElement("div");
+  if(cls) d.className=cls; d.textContent=msg;
+  const L=document.getElementById("log"); L.appendChild(d); L.scrollTop=L.scrollHeight; }
+
+function damage(u,n,how){
+  u.hp=Math.max(0,u.hp-n);
+  if(u.hp===0 && !u.st.down){ u.st.down=true;
+    log(`  ✖ ${u.name} is DOWNED (${how}).`, "l-bad"); }
+}
+
+/* ─── the Control check ───────────────────────────────────────────────────── */
+function check(actor,target,bonusTags){
+  let mod = actor.focus||0; const why=[`Focus +${actor.focus||0}`];
+  if(target){
+    if(target.st.slowed){ mod+=1; why.push("Slowed +1"); }
+    if(target.st.stagger){ mod+=1; why.push("Staggered +1"); }
+  }
+  (bonusTags||[]).forEach(t=>{ mod+=t.n; why.push(`${t.name} ${t.n>0?"+":""}${t.n}`); });
+  const r=roll2(); const total=r.sum+mod; const t=tier(total);
+  log(`${actor.name} rolls ${r.a}+${r.b}=${r.sum} (${why.join(", ")}) → ${total}: ${t.toUpperCase()}`,
+      t==="full"?"l-hit":t==="partial"?"l-part":"l-miss");
+  return t;
+}
+
+/* ─── party actions ───────────────────────────────────────────────────────── */
+function slam(actor,target){            // Cement: 10+ Rooted, 7-9 Slowed (teeth)
+  spend(actor,1);
+  const t=check(actor,target);
+  if(t==="fail"){ log(`  Cement Slam glances off ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Crushing"); setSt(target,"slowed",2);
+    log(`  ${target.name} takes 4 + is Slowed (can't advance, −1 to hit).`,"l-part"); }
+  else { damage(target,5,"Crushing"); setSt(target,"rooted",2);
+    log(`  ${target.name} takes 5 + is ROOTED — pinned in place.`,"l-root"); }
+  finishAction(actor);
+}
+function firebolt(actor,target){        // Pyro: 10+ dmg+Burning, 7-9 dmg only
+  spend(actor,1);
+  const onFire = S.fire[target.band]>0;
+  const bonus = onFire ? [{name:"On-Fire zone",n:1}] : [];
+  const t=check(actor,target,bonus);
+  if(t==="fail"){ log(`  Firebolt sputters past ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,3,"Fire");
+    log(`  ${target.name} takes 3 Fire (no catch).`,"l-part"); }
+  else { damage(target,4,"Fire"); setSt(target,"burning",2);
+    log(`  ${target.name} takes 4 Fire and is BURNING (3/round).`,"l-fire"); }
+  finishAction(actor);
+}
+function scorch(actor,band){            // Pyro: auto — set a band On-Fire
+  spend(actor,1);
+  S.fire[band]=2;
+  log(`${actor.name} sets the ${BANDS[band]} band ABLAZE — On-Fire for 2 rounds (3/round to anything standing in it).`,"l-fire");
+  finishAction(actor);
+}
+
+function spend(actor,n){
+  actor.strain+=n;
+  if(actor.strain>actor.resolve){              // Backlash
+    actor.strain=actor.resolve;
+    setSt(actor,"stagger",1);
+    log(`  ⚠ ${actor.name} pushes past Resolve — BACKLASH, Staggered (loses next action).`,"l-bad");
+  }
+}
+function setSt(u,k,n){ u.st[k]=Math.max(u.st[k]||0,n); }
+
+/* ─── turn flow ───────────────────────────────────────────────────────────── */
+function activeActor(){ return party().find(u=>alive(u)&&!u.acted) || null; }
+
+function finishAction(actor){
+  actor.acted=true;
+  S.pending=null;
+  if(!activeActor()){ render(); setTimeout(enemyTurn,450); }   // party done → enemies
+  else render();
+}
+
+function move(actor,dir){               // dir -1 advance, +1 retreat
+  if(actor.moved) return;
+  actor.band=Math.min(2,Math.max(0,actor.band+dir));
+  actor.moved=true;
+  log(`${actor.name} moves to ${BANDS[actor.band]}.`,"l-miss");
+  render();
+}
+
+function enemyTurn(){
+  S.phase="enemy";
+  liveEnemies().forEach(e=>{
+    if(e.st.stagger){ log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
+    if(e.st.rooted){
+      if(e.band===0) enemyAttack(e);
+      else log(`${e.name} strains against the cement — Rooted, can't move.`,"l-root");
+      return;
+    }
+    if(e.st.slowed){                    // teeth: Slowed costs the advance
+      if(e.band===0) enemyAttack(e);
+      else log(`${e.name} is Slowed — loses ground it wanted to gain (stays at ${BANDS[e.band]}).`,"l-part");
+      return;
+    }
+    if(e.band>0){ e.band--; log(`${e.name} advances to ${BANDS[e.band]}.`,"l-miss"); }
+    else enemyAttack(e);
+  });
+  render();
+  setTimeout(endOfRound,550);
+}
+function enemyAttack(e){
+  const targets=liveParty(); if(!targets.length) return;
+  const tgt=targets[Math.floor(Math.random()*targets.length)];
+  let mod=0; if(e.st.slowed) mod-=1;
+  const r=roll2(); const total=r.sum+mod; const t=tier(total);
+  log(`${e.name} swings at ${tgt.name}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
+      t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
+  if(t==="fail"){ log(`  ${tgt.name} reads it and slips the blow.`,"l-miss"); }
+  else if(t==="partial"){ damage(tgt,3,"a glancing hit"); log(`  ${tgt.name} takes 3.`,"l-part"); }
+  else { damage(tgt,4,"a solid hit"); setSt(tgt,"stagger",1);
+    log(`  ${tgt.name} takes 4 and is Staggered.`,"l-bad"); }
+}
+
+function endOfRound(){
+  log("— end of round —","l-round");
+  // a. DoTs
+  S.units.filter(alive).forEach(u=>{
+    if(u.st.burning){ damage(u,3,"Burning"); log(`  ${u.name} burns for 3.`,"l-fire"); }
+  });
+  // b. On-Fire zones (the combo: a Rooted unit can't leave the band it's cooking in)
+  S.units.filter(alive).forEach(u=>{
+    if(S.fire[u.band]>0){ damage(u,3,"the On-Fire zone");
+      const pin = u.st.rooted ? " — Rooted, nowhere to run" : "";
+      log(`  ${u.name} stands in fire at ${BANDS[u.band]}: 3${pin}.`,"l-fire"); }
+  });
+  // c. tick all durations
+  S.fire=S.fire.map(n=>Math.max(0,n-1));
+  S.units.forEach(u=>{ ["rooted","slowed","burning","stagger"].forEach(k=>{
+    if(u.st[k]) u.st[k]--; }); });
+
+  // win/lose
+  if(!liveEnemies().length){ return finish("win"); }
+  if(!liveParty().length){ return finish("lose","Both Gifted are down."); }
+  S.doom--;
+  if(S.doom<=0){ return finish("lose","The doom clock ran out — reinforcements arrive."); }
+
+  // next round
+  S.round++; S.phase="party";
+  S.units.forEach(u=>{ u.acted=false; u.moved=false; });
+  render();
+}
+
+function finish(result,why){
+  S.over=result;
+  if(result==="win") log(`★ VICTORY — both Raiders down, doom at ${S.doom}. The combo carried it.`,"l-hit");
+  else log(`☠ DEFEAT — ${why}`,"l-bad");
+  render();
+}
+
+/* ─── render ──────────────────────────────────────────────────────────────── */
+function unitCard(u){
+  const tgtable = S.pending && S.pending.targets==="enemy" && u.side==="enemy" && alive(u);
+  const cls=["card",u.side==="party"?"party":"enemy"];
+  if(!alive(u)) cls.push("down");
+  if(S.phase==="party" && !S.over && activeActor()===u) cls.push("active");
+  if(tgtable) cls.push("targetable");
+  const chips=[];
+  if(u.st.rooted)  chips.push(`<span class="chip rooted">Rooted ${u.st.rooted}</span>`);
+  if(u.st.slowed)  chips.push(`<span class="chip slowed">Slowed ${u.st.slowed}</span>`);
+  if(u.st.burning) chips.push(`<span class="chip burning">Burning ${u.st.burning}</span>`);
+  if(u.st.stagger) chips.push(`<span class="chip stagger">Staggered</span>`);
+  if(alive(u) && S.fire[u.band]>0) chips.push(`<span class="chip fire">🔥 in fire</span>`);
+  const click = tgtable ? `onclick="pick('${u.id}')"` : "";
+  return `<div class="${cls.join(" ")}" ${click}>
+    <span class="band">${alive(u)?BANDS[u.band]:"—"}</span>
+    <div class="name">${u.name} <small>· ${u.role}</small></div>
+    <div class="hpwrap"><div class="hp" style="width:${100*u.hp/u.max}%"></div></div>
+    <div class="hpnum">HP ${u.hp}/${u.max}${u.side==="party"?` · Strain ${u.strain}/${u.resolve}`:""}</div>
+    <div class="chips">${chips.join("")}</div>
+  </div>`;
+}
+
+function render(){
+  document.getElementById("doom").textContent=S.doom;
+  document.getElementById("round").textContent=S.round;
+  document.getElementById("doompips").textContent="◆".repeat(Math.max(0,S.doom));
+  document.getElementById("party").innerHTML  = party().map(unitCard).join("");
+  document.getElementById("enemies").innerHTML= enemies().map(unitCard).join("");
+
+  const head=document.getElementById("ctrlhead");
+  const acts=document.getElementById("acts");
+  const hint=document.getElementById("hint");
+  acts.innerHTML=""; hint.textContent="";
+
+  if(S.over){
+    head.innerHTML=`<span class="win ${S.over==="win"?"w":"l"}">${S.over==="win"?"Victory":"Defeat"}</span>`;
+    acts.innerHTML=`<button class="primary" onclick="newGame()">New fight</button>`;
+    return;
+  }
+  if(S.phase!=="party"){ head.textContent="Raiders are acting…"; return; }
+
+  const a=activeActor();
+  if(!a){ head.textContent="…"; return; }
+  head.innerHTML=`${a.name}'s turn <small style="color:var(--dim)">· ${BANDS[a.band]} · Strain ${a.strain}/${a.resolve}</small>`;
+
+  if(S.pending){
+    if(S.pending.type==="scorch"){
+      hint.textContent="Choose a band to set on fire:";
+      acts.innerHTML=BANDS.map((b,i)=>`<button onclick="pick(${i})">${b}${S.fire[i]>0?" 🔥":""}</button>`).join("")
+        +`<button class="ghost" onclick="cancel()">cancel</button>`;
+    } else {
+      hint.textContent=S.pending.type==="slam"
+        ? "Click a Raider at Engaged or Near to Slam."
+        : "Click any Raider to Firebolt.";
+      acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
+    }
+    return;
+  }
+
+  // action menu for the active party member
+  const b=[];
+  if(a.role==="Cement"){
+    b.push(btn("Cement Slam","arm('slam')"));
+  } else {
+    b.push(btn("Firebolt","arm('fire')"));
+    b.push(btn("Scorch (zone)","arm('scorch')"));
+  }
+  b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0));
+  b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2));
+  b.push(`<button class="ghost" onclick="passTurn()">Skip action</button>`);
+  acts.innerHTML=b.join("");
+  hint.textContent="Tip: Slam to Root a Raider at Near, then Scorch the Near band. Watch what the unrooted one does.";
+}
+function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
+
+/* ─── input plumbing ──────────────────────────────────────────────────────── */
+function arm(kind){
+  const a=activeActor(); if(!a) return;
+  if(kind==="slam")   S.pending={type:"slam",actor:a.id,targets:"enemy"};
+  if(kind==="fire")   S.pending={type:"fire",actor:a.id,targets:"enemy"};
+  if(kind==="scorch") S.pending={type:"scorch",actor:a.id};
+  render();
+}
+function cancel(){ S.pending=null; render(); }
+function passTurn(){ const a=activeActor(); if(a){ log(`${a.name} holds.`,"l-miss"); finishAction(a); } }
+function pick(arg){
+  if(!S.pending) return;
+  const a=U(S.pending.actor); const type=S.pending.type;
+  if(type==="scorch"){ scorch(a,arg); return; }
+  const target=U(arg);
+  if(type==="slam"){
+    if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Cement Slam only hits Engaged or Near."; return; }
+    slam(a,target);
+  } else if(type==="fire"){ firebolt(a,target); }
+}
+
+newGame();
+</script>
+</body>
+</html>
