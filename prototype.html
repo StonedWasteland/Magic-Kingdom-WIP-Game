@@ -769,52 +769,52 @@ function render(){
   // action menu for the active party member
   const b=[];
   if(a.role==="Cement"){
-    b.push(btn("Cement Slam","arm('slam')"));
-    b.push(btn("★ Mausoleum","arm('mausoleum')", a.sigDone));
+    b.push(btn("Cement Slam","arm('slam')",false,TIPS.slam));
+    b.push(btn("★ Mausoleum","arm('mausoleum')", a.sigDone, TIPS.mausoleum));
   } else if(a.role==="Pyro"){
-    b.push(btn("Firebolt","arm('fire')"));
-    b.push(btn("Scorch (zone)","arm('scorch')"));
-    b.push(btn("★ Conflagration",`sigConflagration(U('${a.id}'))`, a.sigDone));
+    b.push(btn("Firebolt","arm('fire')",false,TIPS.fire));
+    b.push(btn("Scorch (zone)","arm('scorch')",false,TIPS.scorch));
+    b.push(btn("★ Conflagration",`sigConflagration(U('${a.id}'))`, a.sigDone, TIPS.conflagration));
   } else if(a.role==="Metal"){
-    b.push(`<button class="${a.stance?"primary":""}" onclick="stanceToggle(U('${a.id}'))">${a.stance?"Drop Metal":"Stance: Metal"}</button>`);
-    b.push(btn("Taunt", `taunt(U('${a.id}'))`, a.st.taunting>0));
-    b.push(btn("Sledge","arm('sledge')"));
-    b.push(btn("★ Living Fortress",`sigLivingFortress(U('${a.id}'))`, a.sigDone));
+    b.push(`<button class="${a.stance?"primary":""}" title="${TIPS.stance}" onclick="stanceToggle(U('${a.id}'))">${a.stance?"Drop Metal":"Stance: Metal"}</button>`);
+    b.push(btn("Taunt", `taunt(U('${a.id}'))`, a.st.taunting>0, TIPS.taunt));
+    b.push(btn("Sledge","arm('sledge')",false,TIPS.sledge));
+    b.push(btn("★ Living Fortress",`sigLivingFortress(U('${a.id}'))`, a.sigDone, TIPS.livingFortress));
   } else if(a.role==="Regen"){
-    b.push(btn("Graft (heal / revive)","arm('graft')"));
-    b.push(btn("Mend Self",`mendSelf(U('${a.id}'))`));
-    b.push(btn("Rend","arm('rend')"));
-    b.push(btn("★ Undying",`sigUndying(U('${a.id}'))`, a.sigDone));
+    b.push(btn("Graft (heal / revive)","arm('graft')",false,TIPS.graft));
+    b.push(btn("Mend Self",`mendSelf(U('${a.id}'))`,false,TIPS.mendSelf));
+    b.push(btn("Rend","arm('rend')",false,TIPS.rend));
+    b.push(btn("★ Undying",`sigUndying(U('${a.id}'))`, a.sigDone, TIPS.undying));
   } else if(a.role==="Physical"){
-    b.push(btn("Haymaker (knockback)","arm('haymaker')"));
-    b.push(btn("Hurl Debris","arm('hurl')"));
-    b.push(btn("★ Wrecking Throw","arm('wreck')", a.sigDone));
+    b.push(btn("Haymaker (knockback)","arm('haymaker')",false,TIPS.haymaker));
+    b.push(btn("Hurl Debris","arm('hurl')",false,TIPS.hurl));
+    b.push(btn("★ Wrecking Throw","arm('wreck')", a.sigDone, TIPS.wreck));
   } else if(a.role==="Gravity"){
-    b.push(`<button class="${a.well?"primary":""}" onclick="eventHorizon(U('${a.id}'))">${a.well?"Collapse Well":"Event Horizon"}</button>`);
-    b.push(btn("Crush","arm('crush')"));
-    b.push(btn("★ Singularity",`sigSingularity(U('${a.id}'))`, a.sigDone));
+    b.push(`<button class="${a.well?"primary":""}" title="${TIPS.eventHorizon}" onclick="eventHorizon(U('${a.id}'))">${a.well?"Collapse Well":"Event Horizon"}</button>`);
+    b.push(btn("Crush","arm('crush')",false,TIPS.crush));
+    b.push(btn("★ Singularity",`sigSingularity(U('${a.id}'))`, a.sigDone, TIPS.singularity));
   } else if(a.role==="Overgrowth"){
-    b.push(btn("Strangle","arm('strangle')"));
-    b.push(btn("Thicket",`thicket(U('${a.id}'))`));
-    b.push(btn("★ Worldroot",`sigWorldroot(U('${a.id}'))`, a.sigDone));
+    b.push(btn("Strangle","arm('strangle')",false,TIPS.strangle));
+    b.push(btn("Thicket",`thicket(U('${a.id}'))`,false,TIPS.thicket));
+    b.push(btn("★ Worldroot",`sigWorldroot(U('${a.id}'))`, a.sigDone, TIPS.worldroot));
   } else if(a.role==="Glass"){
-    b.push(btn("Flensing Gale","arm('gale')"));
-    b.push(btn("Glasstorm (zone)","arm('glasszone')"));
-    b.push(btn("★ Glasstorm!",`sigGlasstormSig(U('${a.id}'))`, a.sigDone));
+    b.push(btn("Flensing Gale","arm('gale')",false,TIPS.gale));
+    b.push(btn("Glasstorm (zone)","arm('glasszone')",false,TIPS.glasszone));
+    b.push(btn("★ Glasstorm!",`sigGlasstormSig(U('${a.id}'))`, a.sigDone, TIPS.glasstormSig));
   } else if(a.role==="Radiance"){
-    b.push(btn("Aegis (shield)","arm('aegis')"));
-    b.push(btn("Unmake (purge + heal)","arm('cleanse')"));
-    b.push(btn("Radiant Lance","arm('lance')"));
-    b.push(btn("★ Dayspring",`sigDayspring(U('${a.id}'))`, a.sigDone));
+    b.push(btn("Aegis (shield)","arm('aegis')",false,TIPS.aegis));
+    b.push(btn("Unmake (purge + heal)","arm('cleanse')",false,TIPS.cleanse));
+    b.push(btn("Radiant Lance","arm('lance')",false,TIPS.lance));
+    b.push(btn("★ Dayspring",`sigDayspring(U('${a.id}'))`, a.sigDone, TIPS.dayspring));
   } else if(a.role==="Smith"){
-    b.push(btn("Summon Arms","arm('summon')"));
-    b.push(btn("Bulwark (shield)",`bulwarkArms(U('${a.id}'))`));
-    b.push(btn("★ Panoply",`sigPanoply(U('${a.id}'))`, a.sigDone));
+    b.push(btn("Summon Arms","arm('summon')",false,TIPS.summon));
+    b.push(btn("Bulwark (shield)",`bulwarkArms(U('${a.id}'))`,false,TIPS.bulwark));
+    b.push(btn("★ Panoply",`sigPanoply(U('${a.id}'))`, a.sigDone, TIPS.panoply));
   }
-  b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well));
-  b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well));
-  b.push(`<button class="${S.push?"primary":"ghost"}" onclick="togglePush()" title="Spend 1 Strain for +1 to your next check">Push ${S.push?"ON":"OFF"} · +1 / +1 Strain</button>`);
-  b.push(`<button class="ghost" onclick="passTurn()">Skip action</button>`);
+  b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
+  b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
+  b.push(`<button class="${S.push?"primary":"ghost"}" onclick="togglePush()" title="${TIPS.push}">Push ${S.push?"ON":"OFF"} · +1 / +1 Strain</button>`);
+  b.push(`<button class="ghost" onclick="passTurn()" title="${TIPS.skip}">Skip action</button>`);
   acts.innerHTML=b.join("");
   hint.textContent=a.role==="Metal"
     ? "Tank line: Stance: Metal to armor up, then Taunt to pull the Raiders onto you — the others work free while you soak."
@@ -834,7 +834,49 @@ function render(){
     ? "Striker: Summon Arms — forge the weapon for the moment (Flameblade/Maul/Chain/Glaive). Bulwark forges a shield for yourself."
     : "Tip: gather the Raiders into one band, hold them there, and reap them.";
 }
-function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
+function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
+const TIPS = {
+  // Team 1
+  slam:"Cement Slam — 1 Strain. Engaged/Near. 10+: 5 Crushing + Rooted; 7–9: 4 + Slowed.",
+  fire:"Firebolt — 1 Strain. Any range. 10+: 4 Fire + Burning; 7–9: 3 Fire.",
+  scorch:"Scorch — 1 Strain. Sets a chosen band On-Fire (3/round, 2 rounds). Ember is immune + Stoked in it.",
+  stance:"Stance: Metal — costs the action + 1 Strain/round. Armored (−2 to hits, can't be Staggered) but Heavy (can't move).",
+  taunt:"Taunt — 1 Strain. Forces every enemy to attack this unit for 2 rounds.",
+  sledge:"Sledge — 1 Strain. Engaged/Near. 10+: 5 Crushing (6 in stance) + Stagger; 7–9: 4.",
+  graft:"Graft — 2 Strain. Heal an ally (Regenerating 3/round ×3), or revive a Downed ally to 6 HP.",
+  mendSelf:"Mend Self — 1 Strain. Regenerating on yourself (3/round ×3).",
+  rend:"Rend — 1 Strain. Engaged/Near. 10+: 3 Slashing + Bleeding; 7–9: 3 Slashing.",
+  haymaker:"Haymaker — 1 Strain. Engaged/Near. 10+: 5 Crushing + Knockback (a band away); 7–9: 4.",
+  hurl:"Hurl Debris — 1 Strain. Any range. 10+: 6 Crushing + Stagger; 7–9: 4.",
+  // Team 2
+  eventHorizon:"Event Horizon — costs the action + 1 Strain/round. Opens a Gravity Well: drags enemies inward & crushes them each round. Can't move while held.",
+  crush:"Crush — 1 Strain. Any range. 10+: 6 Crushing + Rooted; 7–9: 4 + Heavy.",
+  strangle:"Strangle — 1 Strain. Any range. 10+: 3 Slashing + Entangled + seeds spreading Overgrowth; 7–9: 3 + Entangled.",
+  thicket:"Thicket — 1 Strain. Thorns on yourself (attackers take 2) + Overgrowth at your band.",
+  gale:"Flensing Gale — 1 Strain. Pick a band: 3 to every enemy there + a Shred stack (they take more from all sources).",
+  glasszone:"Glasstorm (zone) — 1 Strain. Lays a hazard on a band: 2 + Slow + Shred each round, 2 rounds.",
+  aegis:"Aegis — 1 Strain. Barrier on an ally (soaks 5 damage before HP; halves each round).",
+  cleanse:"Unmake — 1 Strain. Strip ALL tags off a target (buffs + debuffs) and heal 2 per tag removed.",
+  lance:"Radiant Lance — 1 Strain. Any range. 10+: 4 Light + Blinded; 7–9: 3 Light.",
+  summon:"Summon Arms — 1 Strain. Engaged/Near. Forge a weapon: Flameblade (Fire), Maul (knockback), Chain (Entangle), Glaive (pierce).",
+  bulwark:"Bulwark — 1 Strain. Forge a shield for yourself (Barrier 4).",
+  // Signatures (★ once per fight, 4 Strain)
+  mausoleum:"★ Mausoleum (4 Strain · once/fight) — entomb an enemy: 5 Crushing + Suppressed (can't act) + Rooted, 3 rounds.",
+  conflagration:"★ Conflagration (4 Strain · once/fight) — detonate every flame: 6 to already-burning foes, 3 to the rest, all Burning.",
+  livingFortress:"★ Living Fortress (4 Strain · once/fight) — Armored + Barrier 8 + Taunt the whole warband, 4 rounds.",
+  undying:"★ Undying (4 Strain · once/fight) — revive every fallen ally (8 HP) + Regenerating on the whole squad.",
+  wreck:"★ Wrecking Throw (4 Strain · once/fight) — 10 Crushing + Knockback to one enemy.",
+  singularity:"★ Singularity (4 Strain · once/fight) — drag the whole warband into your band: 5 Crushing + Heavy.",
+  worldroot:"★ Worldroot (4 Strain · once/fight) — overgrow every band + Entangle every enemy (3 damage).",
+  glasstormSig:"★ Glasstorm (4 Strain · once/fight) — field-wide storm: 4 + Shred ×2 + Slow to every enemy.",
+  dayspring:"★ Dayspring (4 Strain · once/fight) — mass Barrier 5 + heal 3 to allies; 3 Light + Blind to all enemies.",
+  panoply:"★ Panoply (4 Strain · once/fight) — a storm of blades: 4 mixed-type damage to every enemy.",
+  // generic
+  advance:"Move toward Engaged — free (doesn't use your action).",
+  retreat:"Move toward Far — free (doesn't use your action).",
+  push:"Push — toggle. Your next check spends +1 Strain for +1 to the roll.",
+  skip:"Skip this character's action.",
+};
 function chip(cls,label,tip){ return `<span class="chip ${cls}" title="${tip}">${label}</span>`; }
 function enemyTip(role){
   return role==="ranged" ? "Marauder — fires from any range; ignores taunts and the gravity well (shoots past your front line). Squishy: focus it down."
