@@ -112,9 +112,9 @@ let S;
 function raiders(){ return [
   { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16, band:1, st:{}, acted:false },
   { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16, band:1, st:{}, acted:false },
-  { id:"r3", name:"Raider C", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false },
-  { id:"r4", name:"Raider D", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false },
-  { id:"r5", name:"Raider E", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false },
+  { id:"mar", name:"Marauder", role:"ranged", side:"enemy", hp:12,max:12, band:2, st:{}, acted:false },
+  { id:"bru", name:"Brute", role:"brute", side:"enemy", hp:24,max:24, band:2, st:{}, acted:false, ctrlImmune:true },
+  { id:"dis", name:"Disruptor", role:"disruptor", side:"enemy", hp:14,max:14, band:1, st:{}, acted:false },
 ]; }
 function team1(){ return [
   { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false, stance:false },
@@ -139,8 +139,8 @@ function newGame(team){
   };
   document.getElementById("log").innerHTML = "";
   log(team===2
-    ? "TEAM 2 · five Raiders. Cairn opens a gravity well to drag them in, Bryony entangles, Vitra shreds, Sol shields, Brand forges. Gather → hold → reap."
-    : "TEAM 1 · five Raiders. Steele taunts & tanks, Mason & Ember run the fire combo, Wren sustains, Atlas knocks Raiders around.", "l-round");
+    ? "TEAM 2 vs a mixed warband (2 Raiders · Marauder · Brute · Disruptor). Gather → hold → reap — but the Brute ignores your control, the Marauder shoots your back line, the Disruptor strips your buffs. Adapt. (Hover an enemy's name to read its trait.)"
+    : "TEAM 1 vs a mixed warband (2 Raiders · Marauder · Brute · Disruptor). Read the foes: the Brute can't be pinned, the Marauder hits from range, the Disruptor strips buffs. (Hover an enemy's name to read its trait.)", "l-round");
   render();
 }
 
@@ -273,10 +273,10 @@ function haymaker(actor,target){         // Super Strength: Crushing + Knockback
   if(t==="fail"){ log(`  ${actor.name}'s haymaker whiffs past ${target.name}.`,"l-miss"); }
   else if(t==="partial"){ damage(target,4,"Crushing"); log(`  ${target.name} takes 4 Crushing.`,"l-part"); }
   else { damage(target,5,"Crushing");
-    if(alive(target) && target.band<2){ target.band++;
+    if(alive(target) && target.band<2 && !target.ctrlImmune){ target.band++;
       const fire = S.fire[target.band]>0 ? ` — KNOCKED into the fire at ${BANDS[target.band]}!` : ` — knocked back to ${BANDS[target.band]}.`;
       log(`  ${target.name} takes 5 Crushing${fire}`,"l-hit"); }
-    else log(`  ${target.name} takes 5 Crushing.`,"l-hit"); }
+    else log(`  ${target.name} takes 5 Crushing${target.ctrlImmune?" (too heavy to knock back)":""}.`,"l-hit"); }
   finishAction(actor);
 }
 function hurl(actor,target){             // Super Strength: rip up debris and throw — ranged Crushing
@@ -371,7 +371,7 @@ function summonArms(actor,target){       // Blacksmith: strike with the chosen c
   if(t==="fail"){ log(`  ${actor.name}'s ${w} misses ${target.name}.`,"l-miss"); finishAction(actor); return; }
   const full=(t==="full");
   if(w==="Flameblade"){ damage(target,full?4:3,"Fire"); if(full){ setSt(target,"burning",2); log(`  Flameblade: 4 Fire + Burning.`,"l-fire"); } else log(`  Flameblade: 3 Fire.`,"l-part"); }
-  else if(w==="Maul"){ damage(target,full?5:3,"Crushing"); if(full && alive(target) && target.band<2){ target.band++; log(`  Maul: 5 Crushing + knocked to ${BANDS[target.band]}.`,"l-hit"); } else log(`  Maul: ${full?5:3} Crushing.`,full?"l-hit":"l-part"); }
+  else if(w==="Maul"){ damage(target,full?5:3,"Crushing"); if(full && alive(target) && target.band<2 && !target.ctrlImmune){ target.band++; log(`  Maul: 5 Crushing + knocked to ${BANDS[target.band]}.`,"l-hit"); } else log(`  Maul: ${full?5:3} Crushing.`,full?"l-hit":"l-part"); }
   else if(w==="Chain"){ damage(target,3,"Slashing"); setSt(target,full?"entangled":"slowed",2); log(`  Chain: 3 Slashing + ${full?"Entangled":"Slowed"}.`,full?"l-root":"l-part"); }
   else { damage(target,full?5:4,"Piercing"); log(`  Glaive: ${full?5:4} Piercing.`,full?"l-hit":"l-part"); }
   finishAction(actor);
@@ -391,7 +391,12 @@ function spend(actor,n){
     log(`  ⚠ ${actor.name} pushes past Resolve — BACKLASH, Staggered (loses next action).`,"l-bad");
   }
 }
-function setSt(u,k,n){ u.st[k]=Math.max(u.st[k]||0,n); }
+function setSt(u,k,n){
+  if(u.ctrlImmune && (k==="rooted"||k==="heavy"||k==="entangled"||k==="slowed"||k==="stagger")){
+    log(`  ${u.name} shrugs off ${k} (immune to control).`,"l-miss"); return;
+  }
+  u.st[k]=Math.max(u.st[k]||0,n);
+}
 
 /* ─── turn flow ───────────────────────────────────────────────────────────── */
 function activeActor(){ return party().find(u=>alive(u)&&!u.acted) || null; }
@@ -435,6 +440,8 @@ function enemyTurn(){
   S.phase="enemy";
   liveEnemies().forEach(e=>{
     if(e.st.stagger){ e.st.stagger=0; log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
+    if(e.role==="ranged"){ enemyAttack(e); return; }     // Marauder: fires from any range, never needs to close
+    if(e.role==="disruptor"){ disrupt(e); return; }       // Disruptor: strips a buff instead of attacking
     if(e.st.rooted || e.st.entangled || e.st.heavy){    // pinned: can't advance, only attacks if already Engaged
       const why = e.st.rooted?"Rooted":e.st.entangled?"Entangled":"Heavy";
       if(e.band===0) enemyAttack(e);
@@ -454,24 +461,43 @@ function enemyTurn(){
 }
 function enemyAttack(e){
   let targets=liveParty(); if(!targets.length) return;
-  const taunter=targets.find(u=>u.st.taunting);       // aggro: a Taunting tank forces the swing onto itself
-  if(taunter) targets=[taunter];
-  else if(S.well>=0 && e.band===S.well){              // gravity aggro: dragged into the well = swing at the anchor
-    const owner=S.units.find(u=>alive(u)&&u.well); if(owner) targets=[owner];
+  let taunter=null;
+  if(e.role!=="ranged"){                              // ranged shoots past the front — ignores taunt & the well
+    taunter=targets.find(u=>u.st.taunting);
+    if(taunter) targets=[taunter];
+    else if(S.well>=0 && e.band===S.well){            // gravity aggro: dragged into the well = swing at the anchor
+      const owner=S.units.find(u=>alive(u)&&u.well); if(owner) targets=[owner];
+    }
   }
   const tgt=targets[Math.floor(Math.random()*targets.length)];
   let mod=0; if(e.st.slowed) mod-=1; if(e.st.blinded) mod-=1;   // Blinded enemies aim worse (trimmed from -2)
   const r=roll2(); const total=r.sum+mod; const t=tier(total);
-  log(`${e.name} swings at ${tgt.name}${taunter?" (taunted)":""}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
+  const verb = e.role==="ranged" ? "fires at" : "swings at";
+  log(`${e.name} ${verb} ${tgt.name}${taunter?" (taunted)":""}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
       t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
   const soak = d => tgt.stance ? Math.max(1,d-2) : d;  // Armored: living metal sheds 2 off each hit
-  if(t==="fail"){ log(`  ${tgt.name} reads it and slips the blow.`,"l-miss"); }
-  else if(t==="partial"){ const d=soak(3); damage(tgt,d,"a glancing hit");
+  const big = e.role==="brute" ? 2 : 0;               // the Brute hits hard
+  if(t==="fail"){ log(`  ${tgt.name} ${e.role==="ranged"?"ducks the shot":"slips the blow"}.`,"l-miss"); }
+  else if(t==="partial"){ const d=soak(3+big); damage(tgt,d,"a glancing hit");
     log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored)":""}.`,"l-part"); }
-  else { const d=soak(4); damage(tgt,d,"a solid hit");
+  else { const d=soak(4+big); damage(tgt,d,"a solid hit");
     if(!tgt.stance) setSt(tgt,"stagger",1);            // metal can't be Staggered
     log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored, unshaken)":" and is Staggered"}.`,"l-bad"); }
-  if((t==="full"||t==="partial") && tgt.st.thorns){ damage(e,2,"thorns"); log(`  ${e.name} is torn on ${tgt.name}'s thorns: 2.`,"l-part"); }
+  if((t==="full"||t==="partial") && tgt.st.thorns && e.role!=="ranged"){ damage(e,2,"thorns"); log(`  ${e.name} is torn on ${tgt.name}'s thorns: 2.`,"l-part"); }
+}
+function disrupt(e){                                   // Disruptor: strip a buff instead of attacking
+  const buffed=liveParty().filter(u=>(u.barrier||0)>0||u.stance||u.well||u.st.taunting||u.st.regen);
+  if(buffed.length){
+    const t=buffed[Math.floor(Math.random()*buffed.length)];
+    if((t.barrier||0)>0){ t.barrier=0; log(`${e.name} unweaves ${t.name}'s Barrier — shattered.`,"l-bad"); }
+    else if(t.stance){ t.stance=false; log(`${e.name} disrupts ${t.name}'s Metal stance — dropped.`,"l-bad"); }
+    else if(t.well){ t.well=false; S.well=-1; log(`${e.name} destabilizes ${t.name}'s gravity well — collapsed.`,"l-bad"); }
+    else if(t.st.taunting){ t.st.taunting=0; log(`${e.name} breaks ${t.name}'s Taunt.`,"l-bad"); }
+    else if(t.st.regen){ t.st.regen=0; log(`${e.name} severs ${t.name}'s Regeneration.`,"l-bad"); }
+  } else {
+    const tgt=liveParty()[Math.floor(Math.random()*liveParty().length)];
+    if(tgt){ damage(tgt,2,"a warping bolt"); log(`${e.name} finds nothing to unmake — hurls a warping bolt at ${tgt.name}: 2.`,"l-part"); }
+  }
 }
 
 function endOfRound(){
@@ -503,7 +529,7 @@ function endOfRound(){
   // b2. Gravity Well — drag enemies inward, then crush + Heavy those caught
   if(S.well>=0){
     liveEnemies().forEach(e=>{
-      if(e.band!==S.well && !e.st.rooted){ e.band += (e.band>S.well ? -1 : 1);
+      if(e.band!==S.well && !e.st.rooted && !e.ctrlImmune){ e.band += (e.band>S.well ? -1 : 1);
         log(`  ${e.name} is dragged toward the well, now ${BANDS[e.band]}.`,"l-root"); }
     });
     liveEnemies().filter(e=>e.band===S.well).forEach(e=>{ damage(e,3,"the Gravity Well"); setSt(e,"heavy",1);
@@ -594,9 +620,10 @@ function unitCard(u){
     if(S.glass[u.band]>0) chips.push(chip("bleed","◈ glasstorm","Glasstorm band — 2 damage + Slow + Shred each round."));
   } else chips.push(chip("","Downed","Downed — out of the fight. A medic (Wren's Graft) can revive."));
   const click = tgtable ? `onclick="pick('${u.id}')"` : "";
+  const nameTip = u.side==="enemy" ? ` title="${enemyTip(u.role)}"` : "";
   return `<div class="${cls.join(" ")}" ${click}>
     <span class="band">${alive(u)?BANDS[u.band]:"—"}</span>
-    <div class="name">${u.name} <small>· ${u.role}</small></div>
+    <div class="name"${nameTip}>${u.name} <small>· ${u.role}</small></div>
     <div class="hpwrap"><div class="hp" style="width:${100*u.hp/u.max}%"></div></div>
     <div class="hpnum">HP ${u.hp}/${u.max}${u.side==="party"?` · Strain ${u.strain}/${u.resolve}`:""}</div>
     <div class="chips">${chips.join("")}</div>
@@ -719,6 +746,12 @@ function render(){
 }
 function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
 function chip(cls,label,tip){ return `<span class="chip ${cls}" title="${tip}">${label}</span>`; }
+function enemyTip(role){
+  return role==="ranged" ? "Marauder — fires from any range; ignores taunts and the gravity well (shoots past your front line). Squishy: focus it down."
+    : role==="brute" ? "Brute — IMMUNE to pulls, knockback, and pinning (Root/Heavy/Entangle/Slow). The gather-and-hold combo fails on it; out-damage it (Shred still works)."
+    : role==="disruptor" ? "Disruptor — each turn it strips a buff (Barrier / stance / well / Taunt / Regen) instead of attacking."
+    : "Raider — basic melee; advances to Engaged, then attacks.";
+}
 
 /* ─── input plumbing ──────────────────────────────────────────────────────── */
 function arm(kind){
