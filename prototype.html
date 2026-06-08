@@ -39,7 +39,7 @@
   .enemy .hp{background:linear-gradient(90deg,#7d3a3a,var(--enemy))}
   .hpnum{font-size:11px;color:var(--dim)}
   .chips{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;min-height:4px}
-  .chip{font-size:10px;padding:1px 7px;border-radius:10px;border:1px solid var(--line)}
+  .chip{font-size:10px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);cursor:help}
   .chip.rooted{color:var(--root);border-color:var(--root)}
   .chip.slowed{color:#7ad0ff;border-color:#7ad0ff}
   .chip.burning{color:var(--ember);border-color:var(--ember)}
@@ -571,27 +571,27 @@ function unitCard(u){
   if(tgtable) cls.push("targetable");
   const chips=[];
   if(alive(u)){
-    if(u.st.rooted)  chips.push(`<span class="chip rooted">Rooted ${u.st.rooted}</span>`);
-    if(u.st.slowed)  chips.push(`<span class="chip slowed">Slowed ${u.st.slowed}</span>`);
-    if(u.st.burning) chips.push(`<span class="chip burning">Burning ${u.st.burning}</span>`);
-    if(u.st.stagger) chips.push(`<span class="chip stagger">Staggered</span>`);
-    if(u.stance) chips.push(`<span class="chip armor">⛨ Metal · Armored</span>`);
-    if(u.st.taunting) chips.push(`<span class="chip taunt">⚑ Taunting ${u.st.taunting}</span>`);
-    if(u.st.regen) chips.push(`<span class="chip regen">✚ Regenerating ${u.st.regen}</span>`);
-    if(u.st.bleeding) chips.push(`<span class="chip bleed">🩸 Bleeding ${u.st.bleeding}</span>`);
-    if(u.st.heavy) chips.push(`<span class="chip rooted">⬇ Heavy ${u.st.heavy}</span>`);
-    if(u.st.entangled) chips.push(`<span class="chip rooted">🌿 Entangled ${u.st.entangled}</span>`);
-    if(u.st.blinded) chips.push(`<span class="chip slowed">😵 Blinded ${u.st.blinded}</span>`);
-    if(u.st.shred) chips.push(`<span class="chip bleed">◈ Shred ${u.st.shred}</span>`);
-    if(u.st.thorns) chips.push(`<span class="chip regen">❧ Thorns ${u.st.thorns}</span>`);
-    if((u.barrier||0)>0) chips.push(`<span class="chip armor">◇ Barrier ${u.barrier}</span>`);
+    if(u.st.rooted)  chips.push(chip("rooted",`Rooted ${u.st.rooted}`,"Rooted — can't move or flee. Still attacks if already Engaged."));
+    if(u.st.slowed)  chips.push(chip("slowed",`Slowed ${u.st.slowed}`,"Slowed — loses its advance this turn and takes −1 to attacks."));
+    if(u.st.burning) chips.push(chip("burning",`Burning ${u.st.burning}`,"Burning — 3 fire damage at end of round. (Fire-affinity units are immune.)"));
+    if(u.st.stagger) chips.push(chip("stagger","Staggered","Staggered — loses its next action."));
+    if(u.stance)     chips.push(chip("armor","⛨ Metal · Armored","Stance: Metal — −2 to every incoming hit and immune to Stagger, but Heavy (can't move) and costs Strain each round."));
+    if(u.st.taunting)chips.push(chip("taunt",`⚑ Taunting ${u.st.taunting}`,"Taunting — every enemy must attack this unit."));
+    if(u.st.regen)   chips.push(chip("regen",`✚ Regenerating ${u.st.regen}`,"Regenerating — heals 3 HP at end of round. Suppressed (Cauterized) while Burning or standing in fire."));
+    if(u.st.bleeding)chips.push(chip("bleed",`🩸 Bleeding ${u.st.bleeding}`,"Bleeding — 2 damage at end of round."));
+    if(u.st.heavy)   chips.push(chip("rooted",`⬇ Heavy ${u.st.heavy}`,"Heavy — pinned by gravity; can't advance."));
+    if(u.st.entangled)chips.push(chip("rooted",`🌿 Entangled ${u.st.entangled}`,"Entangled — gripped by vines; can't move."));
+    if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −2 to this unit's attack rolls."));
+    if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
+    if(u.st.thorns)  chips.push(chip("regen",`❧ Thorns ${u.st.thorns}`,"Thorns — anyone who hits this unit takes 2 damage back."));
+    if((u.barrier||0)>0) chips.push(chip("armor",`◇ Barrier ${u.barrier}`,`Barrier — absorbs the next ${u.barrier} damage before HP is touched.`));
     if(S.fire[u.band]>0) chips.push(u.affinity==="fire"
-      ? `<span class="chip stoked">🔥 Stoked +1</span>`
-      : `<span class="chip fire">🔥 in fire</span>`);
-    if(S.well===u.band) chips.push(`<span class="chip rooted">🌀 in the well</span>`);
-    if(S.grown[u.band]>0) chips.push(`<span class="chip regen">🌿 overgrown</span>`);
-    if(S.glass[u.band]>0) chips.push(`<span class="chip bleed">◈ glasstorm</span>`);
-  } else chips.push(`<span class="chip">Downed</span>`);
+      ? chip("stoked","🔥 Stoked +1","Standing in fire — immune to it, and +1 to fire attacks (fire affinity).")
+      : chip("fire","🔥 in fire","Standing in an On-Fire band — 3 fire damage at end of round."));
+    if(S.well===u.band)   chips.push(chip("rooted","🌀 in the well","Gravity Well — dragged toward the anchor and crushed (3 + Heavy) each round."));
+    if(S.grown[u.band]>0) chips.push(chip("regen","🌿 overgrown","Overgrown band — enemies here take 2 + Entangled each round; it spreads to nearby bands."));
+    if(S.glass[u.band]>0) chips.push(chip("bleed","◈ glasstorm","Glasstorm band — 2 damage + Slow + Blind + Shred each round."));
+  } else chips.push(chip("","Downed","Downed — out of the fight. A medic (Wren's Graft) can revive."));
   const click = tgtable ? `onclick="pick('${u.id}')"` : "";
   return `<div class="${cls.join(" ")}" ${click}>
     <span class="band">${alive(u)?BANDS[u.band]:"—"}</span>
@@ -717,6 +717,7 @@ function render(){
     : "Tip: gather the Raiders into one band, hold them there, and reap them.";
 }
 function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
+function chip(cls,label,tip){ return `<span class="chip ${cls}" title="${tip}">${label}</span>`; }
 
 /* ─── input plumbing ──────────────────────────────────────────────────────── */
 function arm(kind){
