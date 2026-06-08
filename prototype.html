@@ -389,6 +389,76 @@ function bulwarkArms(actor){             // Blacksmith: forge a guard — self B
   finishAction(actor);
 }
 
+/* ─── Signatures (capstones) — once per fight, high Strain ───────────────── */
+function sigConflagration(actor){        // Pyro: detonate every flame
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} unleashes CONFLAGRATION — every flame on the field detonates!`,"l-fire");
+  liveEnemies().forEach(e=>{ const lit=e.st.burning>0||S.fire[e.band]>0; damage(e,lit?6:3,"Conflagration"); setSt(e,"burning",2);
+    log(`  ${e.name} takes ${lit?6:3} Fire${lit?" (was already burning!)":""} + Burning.`,"l-fire"); });
+  finishAction(actor);
+}
+function sigMausoleum(actor,target){     // Cement: entomb one enemy (hard lock)
+  spend(actor,4); actor.sigDone=true;
+  damage(target,5,"Crushing"); setSt(target,"rooted",3); setSt(target,"suppressed",3);
+  log(`${actor.name} entombs ${target.name} in cement — 5 Crushing, ROOTED + SUPPRESSED (can't act) for 3 rounds.`,"l-root");
+  finishAction(actor);
+}
+function sigWreckingThrow(actor,target){ // Strength: bury one enemy under a car
+  spend(actor,4); actor.sigDone=true;
+  damage(target,10,"Crushing");
+  const kb = (alive(target)&&target.band<2&&!target.ctrlImmune) ? (target.band++, " and hurled back") : "";
+  log(`${actor.name} hurls a CAR at ${target.name} — 10 Crushing${kb}!`,"l-hit");
+  finishAction(actor);
+}
+function sigLivingFortress(actor){       // Metal Skin: become an immovable bulwark + taunt all
+  spend(actor,4); actor.sigDone=true; actor.stance=true;
+  setSt(actor,"taunting",4); actor.barrier=(actor.barrier||0)+8;
+  log(`${actor.name} becomes a LIVING FORTRESS — Armored, Barrier 8, Taunting the whole warband for 4 rounds.`,"l-root");
+  finishAction(actor);
+}
+function sigUndying(actor){              // Regeneration: raise the fallen, mass regen
+  spend(actor,4); actor.sigDone=true;
+  party().forEach(u=>{ if(!alive(u)){ u.hp=8; u.st.down=false; log(`  ${u.name} rises — UNDYING (8 HP).`,"l-hit"); } setSt(u,"regen",3); });
+  log(`${actor.name} channels UNDYING — fallen allies rise and the whole squad Regenerates.`,"l-hit");
+  finishAction(actor);
+}
+function sigSingularity(actor){          // Gravity: yank the whole warband into one band
+  spend(actor,4); actor.sigDone=true;
+  const b=actor.band;
+  liveEnemies().forEach(e=>{ if(!e.ctrlImmune){ e.band=b; setSt(e,"heavy",2); } damage(e,5,"the Singularity"); });
+  log(`${actor.name} collapses a SINGULARITY at ${BANDS[b]} — the warband crushed into one point (5 + Heavy).`,"l-root");
+  finishAction(actor);
+}
+function sigWorldroot(actor){            // Overgrowth: overgrow every band, entangle all
+  spend(actor,4); actor.sigDone=true;
+  S.grown=[3,3,3];
+  liveEnemies().forEach(e=>{ damage(e,3,"Worldroot"); setSt(e,"entangled",3); });
+  log(`${actor.name} erupts WORLDROOT — every band overgrown, the warband Entangled.`,"l-root");
+  finishAction(actor);
+}
+function sigGlasstormSig(actor){         // Glasstorm: the full tempest
+  spend(actor,4); actor.sigDone=true;
+  S.glass=[3,3,3];
+  liveEnemies().forEach(e=>{ e.st.shred=Math.min(8,(e.st.shred||0)+2); damage(e,4,"the Glasstorm"); setSt(e,"slowed",2); });
+  log(`${actor.name} raises a full GLASSTORM — the field flayed: 4 + Shred ×2 + Slow on every foe.`,"l-fire");
+  finishAction(actor);
+}
+function sigDayspring(actor){            // Radiance: mass shield + heal + sear
+  spend(actor,4); actor.sigDone=true;
+  party().forEach(u=>{ if(alive(u)){ u.barrier=(u.barrier||0)+5; u.hp=Math.min(u.max,u.hp+3); } });
+  liveEnemies().forEach(e=>{ damage(e,3,"Light"); setSt(e,"blinded",2); });
+  log(`${actor.name} calls the DAYSPRING — squad shielded (Barrier 5) & healed 3; the warband seared and Blinded.`,"l-hit");
+  finishAction(actor);
+}
+function sigPanoply(actor){              // Blacksmith: a storm of conjured blades
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} unleashes the PANOPLY — a storm of conjured blades:`,"l-hit");
+  liveEnemies().forEach(e=>{ const ty=["Fire","Crushing","Slashing","Piercing"][Math.floor(Math.random()*4)];
+    damage(e,4,ty); if(ty==="Fire") setSt(e,"burning",1); if(ty==="Slashing") setSt(e,"bleeding",2);
+    log(`  ${e.name} takes 4 ${ty}.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -398,7 +468,7 @@ function spend(actor,n){
   }
 }
 function setSt(u,k,n){
-  if(u.ctrlImmune && (k==="rooted"||k==="heavy"||k==="entangled"||k==="slowed"||k==="stagger")){
+  if(u.ctrlImmune && (k==="rooted"||k==="heavy"||k==="entangled"||k==="slowed"||k==="stagger"||k==="suppressed")){
     log(`  ${u.name} shrugs off ${k} (immune to control).`,"l-miss"); return;
   }
   u.st[k]=Math.max(u.st[k]||0,n);
@@ -446,6 +516,7 @@ function enemyTurn(){
   S.phase="enemy";
   liveEnemies().forEach(e=>{
     if(e.st.stagger){ e.st.stagger=0; log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
+    if(e.st.suppressed){ e.st.suppressed--; log(`${e.name} is entombed (Suppressed) — can't act.`,"l-root"); return; }
     if(e.role==="ranged"){ enemyAttack(e); return; }     // Marauder: fires from any range, never needs to close
     if(e.role==="disruptor"){ disrupt(e); return; }       // Disruptor: strips a buff instead of attacking
     if(e.st.rooted || e.st.entangled || e.st.heavy){    // pinned: can't advance, only attacks if already Engaged
@@ -614,6 +685,7 @@ function unitCard(u){
     if(u.st.bleeding)chips.push(chip("bleed",`🩸 Bleeding ${u.st.bleeding}`,"Bleeding — 2 damage at end of round."));
     if(u.st.heavy)   chips.push(chip("rooted",`⬇ Heavy ${u.st.heavy}`,"Heavy — pinned by gravity; can't advance."));
     if(u.st.entangled)chips.push(chip("rooted",`🌿 Entangled ${u.st.entangled}`,"Entangled — gripped by vines; can't move."));
+    if(u.st.suppressed)chips.push(chip("rooted",`⛓ Suppressed ${u.st.suppressed}`,"Suppressed — entombed in cement; can't act at all."));
     if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −1 to this unit's attack rolls."));
     if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
     if(u.st.thorns)  chips.push(chip("regen",`❧ Thorns ${u.st.thorns}`,"Thorns — anyone who hits this unit takes 2 damage back."));
@@ -686,6 +758,8 @@ function render(){
         : pt==="aegis" ? "Click an ally to shield with a Barrier."
         : pt==="cleanse" ? "Click an ally to Unmake — purge ALL their tags (buffs & debuffs), heal 2 per tag."
         : pt==="summon" ? `Click a Raider at Engaged or Near to strike with the ${S.pending.weapon}.`
+        : pt==="mausoleum" ? "Click any Raider to entomb in cement (hard lock — can't act)."
+        : pt==="wreck" ? "Click any Raider to bury under a Wrecking Throw (10 Crushing)."
         : "Click any Raider to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -696,36 +770,46 @@ function render(){
   const b=[];
   if(a.role==="Cement"){
     b.push(btn("Cement Slam","arm('slam')"));
+    b.push(btn("★ Mausoleum","arm('mausoleum')", a.sigDone));
   } else if(a.role==="Pyro"){
     b.push(btn("Firebolt","arm('fire')"));
     b.push(btn("Scorch (zone)","arm('scorch')"));
+    b.push(btn("★ Conflagration",`sigConflagration(U('${a.id}'))`, a.sigDone));
   } else if(a.role==="Metal"){
     b.push(`<button class="${a.stance?"primary":""}" onclick="stanceToggle(U('${a.id}'))">${a.stance?"Drop Metal":"Stance: Metal"}</button>`);
     b.push(btn("Taunt", `taunt(U('${a.id}'))`, a.st.taunting>0));
     b.push(btn("Sledge","arm('sledge')"));
+    b.push(btn("★ Living Fortress",`sigLivingFortress(U('${a.id}'))`, a.sigDone));
   } else if(a.role==="Regen"){
     b.push(btn("Graft (heal / revive)","arm('graft')"));
     b.push(btn("Mend Self",`mendSelf(U('${a.id}'))`));
     b.push(btn("Rend","arm('rend')"));
+    b.push(btn("★ Undying",`sigUndying(U('${a.id}'))`, a.sigDone));
   } else if(a.role==="Physical"){
     b.push(btn("Haymaker (knockback)","arm('haymaker')"));
     b.push(btn("Hurl Debris","arm('hurl')"));
+    b.push(btn("★ Wrecking Throw","arm('wreck')", a.sigDone));
   } else if(a.role==="Gravity"){
     b.push(`<button class="${a.well?"primary":""}" onclick="eventHorizon(U('${a.id}'))">${a.well?"Collapse Well":"Event Horizon"}</button>`);
     b.push(btn("Crush","arm('crush')"));
+    b.push(btn("★ Singularity",`sigSingularity(U('${a.id}'))`, a.sigDone));
   } else if(a.role==="Overgrowth"){
     b.push(btn("Strangle","arm('strangle')"));
     b.push(btn("Thicket",`thicket(U('${a.id}'))`));
+    b.push(btn("★ Worldroot",`sigWorldroot(U('${a.id}'))`, a.sigDone));
   } else if(a.role==="Glass"){
     b.push(btn("Flensing Gale","arm('gale')"));
     b.push(btn("Glasstorm (zone)","arm('glasszone')"));
+    b.push(btn("★ Glasstorm!",`sigGlasstormSig(U('${a.id}'))`, a.sigDone));
   } else if(a.role==="Radiance"){
     b.push(btn("Aegis (shield)","arm('aegis')"));
     b.push(btn("Unmake (purge + heal)","arm('cleanse')"));
     b.push(btn("Radiant Lance","arm('lance')"));
+    b.push(btn("★ Dayspring",`sigDayspring(U('${a.id}'))`, a.sigDone));
   } else if(a.role==="Smith"){
     b.push(btn("Summon Arms","arm('summon')"));
     b.push(btn("Bulwark (shield)",`bulwarkArms(U('${a.id}'))`));
+    b.push(btn("★ Panoply",`sigPanoply(U('${a.id}'))`, a.sigDone));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well));
@@ -778,6 +862,8 @@ function arm(kind){
   if(kind==="cleanse")  S.pending={type:"cleanse",actor:a.id,targets:"ally"};
   if(kind==="lance")    S.pending={type:"lance",actor:a.id,targets:"enemy"};
   if(kind==="summon")   S.pending={type:"summon",actor:a.id,weaponPick:true};
+  if(kind==="mausoleum")S.pending={type:"mausoleum",actor:a.id,targets:"enemy"};
+  if(kind==="wreck")    S.pending={type:"wreck",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -802,6 +888,8 @@ function pick(arg){
   if(type==="crush"){ crush(a,target); return; }
   if(type==="strangle"){ strangle(a,target); return; }
   if(type==="lance"){ radiantLance(a,target); return; }
+  if(type==="mausoleum"){ sigMausoleum(a,target); return; }
+  if(type==="wreck"){ sigWreckingThrow(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
