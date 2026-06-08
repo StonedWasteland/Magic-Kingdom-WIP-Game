@@ -91,7 +91,7 @@ Health pools are **deliberately large** so no single hit ends anyone — fights 
 attrition and control, not burst. This is what makes the combo engine the star: locking an enemy
 and cooking it over rounds beats one big number.
 
-- **HP 20** (party and Raiders alike at MVP scale).
+- **HP 20** party, **16** Raiders (playtest dial — Raiders trimmed so a focused combo clears them inside the clock).
 - Damage in chunks that are a *fraction* of the bar: **Firebolt ~4**, **Crushing Slam ~5**,
   **Raider hit ~4**, **Burning / On-Fire ~3 per round.** Roughly **5 hits** to drop someone, so
   positioning and tempo have room to matter.
@@ -112,7 +112,7 @@ The one-shot is a *reward you build toward*, never a default anyone carries.
 
 ## The doom clock
 
-A visible counter starting at **5**. −1 each round end. At **0**: the slice is **lost** (stand-in
+A visible counter starting at **6**. −1 each round end. At **0**: the slice is **lost** (stand-in
 for "reinforcements arrive / objective fails"). Its whole job in the MVP is to make **tempo cost
 real** — every turn spent maneuvering is a turn closer to losing, which is the pressure that
 makes the Pyro+Cement *tempo* of "lock it, then burn it" matter.

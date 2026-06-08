@@ -72,7 +72,7 @@
 <div class="sub">2d6 · 10+ full / 7–9 partial / 6− fail · lock it, then burn it · prove the tags talk.</div>
 
 <div class="topbar">
-  <div class="doom">DOOM <b id="doom">5</b> &nbsp;<span class="pip" id="doompips"></span></div>
+  <div class="doom">DOOM <b id="doom">6</b> &nbsp;<span class="pip" id="doompips"></span></div>
   <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
 </div>
 
@@ -105,7 +105,7 @@ const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 let S;
 function newGame(){
   S = {
-    round:1, doom:5, phase:"party", pending:null, over:null,
+    round:1, doom:6, phase:"party", pending:null, over:null,
     fire:[0,0,0],                                  // On-Fire rounds-left per band
     units:[
       { id:"mason", name:"Mason", role:"Cement",  side:"party", hp:20,max:20,
@@ -113,9 +113,9 @@ function newGame(){
       { id:"ember", name:"Ember", role:"Pyro",    side:"party", hp:20,max:20,
         resolve:6, strain:0, focus:1, band:1, st:{}, acted:false, moved:false,
         affinity:"fire" },                         // reads On-Fire/Burning as a buff, not damage
-      { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:20,max:20,
+      { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16,
         band:1, st:{}, acted:false },
-      { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:20,max:20,
+      { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16,
         band:1, st:{}, acted:false },
     ],
   };
