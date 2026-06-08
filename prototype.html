@@ -78,6 +78,8 @@
 <div class="topbar">
   <div class="doom">DOOM <b id="doom">8</b> &nbsp;<span class="pip" id="doompips"></span></div>
   <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
+  <div class="doom">TEAM <b id="teamlabel" style="color:var(--ink)">1</b></div>
+  <button onclick="newGame(S.team===2?1:2)" style="margin-left:auto" title="Restart with the other squad">Switch squad ⇄</button>
 </div>
 
 <div class="cols">
@@ -107,37 +109,38 @@ const roll2 = () => { const a=1+Math.floor(Math.random()*6),
 const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 
 let S;
-function newGame(){
+function raiders(){ return [
+  { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16, band:1, st:{}, acted:false },
+  { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16, band:1, st:{}, acted:false },
+  { id:"r3", name:"Raider C", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false },
+  { id:"r4", name:"Raider D", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false },
+  { id:"r5", name:"Raider E", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false },
+]; }
+function team1(){ return [
+  { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false, stance:false },
+  { id:"mason", name:"Mason", role:"Cement", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"ember", name:"Ember", role:"Pyro", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false, affinity:"fire" },
+  { id:"wren", name:"Wren", role:"Regen", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"atlas", name:"Atlas", role:"Physical", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
+function team2(){ return [
+  { id:"cairn", name:"Cairn", role:"Gravity", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false, well:false },
+  { id:"bryony", name:"Bryony", role:"Overgrowth", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"vitra", name:"Vitra", role:"Glass", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"sol", name:"Sol", role:"Radiance", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"brand", name:"Brand", role:"Smith", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
+function newGame(team){
+  team = team || (S && S.team) || 1;
   S = {
-    round:1, doom:8, phase:"party", pending:null, over:null, push:false,
-    fire:[0,0,0],                                  // On-Fire rounds-left per band
-    units:[
-      { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22,
-        resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false,
-        stance:false },                            // Stance:Metal — Armored + unstaggerable, but Heavy & costs upkeep
-      { id:"mason", name:"Mason", role:"Cement",  side:"party", hp:20,max:20,
-        resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
-      { id:"ember", name:"Ember", role:"Pyro",    side:"party", hp:20,max:20,
-        resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false,
-        affinity:"fire" },                         // reads On-Fire/Burning as a buff, not damage
-      { id:"wren", name:"Wren", role:"Regen", side:"party", hp:18,max:18,
-        resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
-      { id:"atlas", name:"Atlas", role:"Physical", side:"party", hp:20,max:20,
-        resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
-      { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16,
-        band:1, st:{}, acted:false },
-      { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16,
-        band:1, st:{}, acted:false },
-      { id:"r3", name:"Raider C", role:"melee", side:"enemy", hp:16,max:16,
-        band:2, st:{}, acted:false },              // starts Far — staggered arrival
-      { id:"r4", name:"Raider D", role:"melee", side:"enemy", hp:16,max:16,
-        band:2, st:{}, acted:false },
-      { id:"r5", name:"Raider E", role:"melee", side:"enemy", hp:16,max:16,
-        band:2, st:{}, acted:false },
-    ],
+    team:team, round:1, doom:8, phase:"party", pending:null, over:null, push:false,
+    fire:[0,0,0], grown:[0,0,0], glass:[0,0,0], well:-1,   // zone state per band; well = band index or -1
+    units:(team===2?team2():team1()).concat(raiders()),
   };
   document.getElementById("log").innerHTML = "";
-  log("Full squad, five Raiders. Steele taunts & tanks, Mason & Ember run the fire combo, Wren keeps everyone standing, and Atlas knocks Raiders around — into the fire, or off your line.", "l-round");
+  log(team===2
+    ? "TEAM 2 · five Raiders. Cairn opens a gravity well to drag them in, Bryony entangles, Vitra shreds, Sol shields, Brand forges. Gather → hold → reap."
+    : "TEAM 1 · five Raiders. Steele taunts & tanks, Mason & Ember run the fire combo, Wren sustains, Atlas knocks Raiders around.", "l-round");
   render();
 }
 
@@ -154,6 +157,12 @@ function log(msg,cls){ const d=document.createElement("div");
   const L=document.getElementById("log"); L.appendChild(d); L.scrollTop=L.scrollHeight; }
 
 function damage(u,n,how){
+  n += (u.st.shred||0);                            // Shred amplifier: take more from every source
+  if((u.barrier||0)>0){                            // Barrier shields soak before HP
+    const soak=Math.min(u.barrier,n); u.barrier-=soak; n-=soak;
+    if(soak>0) log(`  ${u.name}'s Barrier absorbs ${soak}${u.barrier>0?` (${u.barrier} left)`:" — shattered"}.`,"l-miss");
+  }
+  if(n<=0) return;
   u.hp=Math.max(0,u.hp-n);
   if(u.hp===0 && !u.st.down){ u.st.down=true;
     log(`  ✖ ${u.name} is DOWNED (${how}).`, "l-bad"); }
@@ -281,6 +290,99 @@ function hurl(actor,target){             // Super Strength: rip up debris and th
   finishAction(actor);
 }
 
+/* ─── Team 2 actions ──────────────────────────────────────────────────────── */
+function eventHorizon(actor){            // Gravity Anchor: open/close the Gravity Well at your band
+  actor.well=!actor.well;
+  if(actor.well){ S.well=actor.band;
+    log(`${actor.name} opens a GRAVITY WELL at ${BANDS[actor.band]} — each round it drags enemies inward and crushes those caught (Heavy). Strain upkeep; can't move while held.`,"l-root"); }
+  else { S.well=-1; log(`${actor.name} lets the well collapse — mobile again.`,"l-miss"); }
+  finishAction(actor);
+}
+function crush(actor,target){            // Gravity Anchor: spike gravity — Crushing + pin
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  The gravity spike misses ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Crushing"); setSt(target,"heavy",1); log(`  ${target.name} takes 4 + is Heavy.`,"l-part"); }
+  else { damage(target,6,"Crushing"); setSt(target,"rooted",2); log(`  ${target.name} takes 6 Crushing + is PINNED (Rooted).`,"l-root"); }
+  finishAction(actor);
+}
+function strangle(actor,target){         // Overgrowth: Slashing + Entangled, seeds Overgrown
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  The vines miss ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,3,"Slashing"); setSt(target,"entangled",2); log(`  ${target.name} takes 3 + is Entangled.`,"l-part"); }
+  else { damage(target,3,"Slashing"); setSt(target,"entangled",3); S.grown[target.band]=Math.max(S.grown[target.band],2);
+    log(`  ${target.name} takes 3 + ENTANGLED; Overgrowth roots at ${BANDS[target.band]} (it spreads).`,"l-root"); }
+  finishAction(actor);
+}
+function thicket(actor){                 // Overgrowth: grow Cover + Thorns at your band
+  spend(actor,1);
+  setSt(actor,"thorns",3);
+  S.grown[actor.band]=Math.max(S.grown[actor.band],2);
+  log(`${actor.name} raises a thorned thicket — Thorns (attackers bleed) + Overgrown at ${BANDS[actor.band]}.`,"l-root");
+  finishAction(actor);
+}
+function flensingGale(actor,band){       // Glasstorm: band AoE — damage all enemies there + Shred
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  if(!hit.length){ log(`${actor.name}'s gale finds no one at ${BANDS[band]}.`,"l-miss"); finishAction(actor); return; }
+  log(`${actor.name} looses a Flensing Gale across ${BANDS[band]}:`,"l-part");
+  hit.forEach(e=>{ e.st.shred=Math.min(6,(e.st.shred||0)+1); damage(e,3,"Slashing");
+    log(`  ${e.name} takes 3 + Shred ${e.st.shred} (takes +${e.st.shred} from all sources).`,"l-part"); });
+  finishAction(actor);
+}
+function glassZone(actor,band){          // Glasstorm: lay a Glasstorm hazard on a band
+  spend(actor,1);
+  S.glass[band]=2;
+  log(`${actor.name} whips a Glasstorm across ${BANDS[band]} — abrasion + Slow + Blind + Shred to anything caught, 2 rounds.`,"l-fire");
+  finishAction(actor);
+}
+function aegis(actor,target){            // Radiance: Barrier shield on an ally (preventive HP)
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+6;
+  log(`${actor.name} shields ${target.name} — Barrier ${target.barrier} (soaks damage before HP).`,"l-hit");
+  finishAction(actor);
+}
+function cleanse(actor,target){          // Radiance: strip one debuff off an ally (the dispel verb)
+  spend(actor,1);
+  const bad=["burning","bleeding","slowed","rooted","entangled","heavy","shred","blinded","stagger"];
+  let cleared=null;
+  for(const k of bad){ if(target.st[k]){ cleared=k; target.st[k]=0; break; } }
+  if(cleared) log(`${actor.name} cleanses ${cleared} from ${target.name}.`,"l-hit");
+  else log(`${actor.name} finds nothing to cleanse on ${target.name}.`,"l-miss");
+  finishAction(actor);
+}
+function radiantLance(actor,target){     // Radiance: Light damage + Blind
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  The lance of light misses ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,3,"Light"); log(`  ${target.name} takes 3 Light.`,"l-part"); }
+  else { damage(target,4,"Light"); setSt(target,"blinded",2); log(`  ${target.name} takes 4 Light + is Blinded.`,"l-hit"); }
+  finishAction(actor);
+}
+function summonArms(actor,target){       // Blacksmith: strike with the chosen conjured weapon
+  const w=(S.pending && S.pending.weapon) || "Glaive"; S.pending=null;
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s ${w} misses ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  const full=(t==="full");
+  if(w==="Flameblade"){ damage(target,full?4:3,"Fire"); if(full){ setSt(target,"burning",2); log(`  Flameblade: 4 Fire + Burning.`,"l-fire"); } else log(`  Flameblade: 3 Fire.`,"l-part"); }
+  else if(w==="Maul"){ damage(target,full?5:3,"Crushing"); if(full && alive(target) && target.band<2){ target.band++; log(`  Maul: 5 Crushing + knocked to ${BANDS[target.band]}.`,"l-hit"); } else log(`  Maul: ${full?5:3} Crushing.`,full?"l-hit":"l-part"); }
+  else if(w==="Chain"){ damage(target,3,"Slashing"); setSt(target,full?"entangled":"slowed",2); log(`  Chain: 3 Slashing + ${full?"Entangled":"Slowed"}.`,full?"l-root":"l-part"); }
+  else { damage(target,full?5:4,"Piercing"); log(`  Glaive: ${full?5:4} Piercing.`,full?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function bulwarkArms(actor){             // Blacksmith: forge a guard — self Barrier
+  spend(actor,1);
+  actor.barrier=(actor.barrier||0)+5;
+  log(`${actor.name} forges a tower shield — Barrier ${actor.barrier}.`,"l-hit");
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -322,6 +424,7 @@ function checkEnd(){
 function move(actor,dir){               // dir -1 advance, +1 retreat
   if(actor.moved) return;
   if(actor.stance){ log(`${actor.name} is too Heavy in metal to reposition.`,"l-miss"); render(); return; }
+  if(actor.well){ log(`${actor.name} is anchoring the well — can't move while it's open.`,"l-miss"); render(); return; }
   actor.band=Math.min(2,Math.max(0,actor.band+dir));
   actor.moved=true;
   log(`${actor.name} moves to ${BANDS[actor.band]}.`,"l-miss");
@@ -332,9 +435,10 @@ function enemyTurn(){
   S.phase="enemy";
   liveEnemies().forEach(e=>{
     if(e.st.stagger){ e.st.stagger=0; log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
-    if(e.st.rooted){
+    if(e.st.rooted || e.st.entangled || e.st.heavy){    // pinned: can't advance, only attacks if already Engaged
+      const why = e.st.rooted?"Rooted":e.st.entangled?"Entangled":"Heavy";
       if(e.band===0) enemyAttack(e);
-      else log(`${e.name} strains against the cement — Rooted, can't move.`,"l-root");
+      else log(`${e.name} is pinned (${why}) — can't advance.`,"l-root");
       return;
     }
     if(e.st.slowed){                    // teeth: Slowed costs the advance
@@ -352,8 +456,11 @@ function enemyAttack(e){
   let targets=liveParty(); if(!targets.length) return;
   const taunter=targets.find(u=>u.st.taunting);       // aggro: a Taunting tank forces the swing onto itself
   if(taunter) targets=[taunter];
+  else if(S.well>=0 && e.band===S.well){              // gravity aggro: dragged into the well = swing at the anchor
+    const owner=S.units.find(u=>alive(u)&&u.well); if(owner) targets=[owner];
+  }
   const tgt=targets[Math.floor(Math.random()*targets.length)];
-  let mod=0; if(e.st.slowed) mod-=1;
+  let mod=0; if(e.st.slowed) mod-=1; if(e.st.blinded) mod-=2;   // Blinded enemies aim worse
   const r=roll2(); const total=r.sum+mod; const t=tier(total);
   log(`${e.name} swings at ${tgt.name}${taunter?" (taunted)":""}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
       t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
@@ -364,6 +471,7 @@ function enemyAttack(e){
   else { const d=soak(4); damage(tgt,d,"a solid hit");
     if(!tgt.stance) setSt(tgt,"stagger",1);            // metal can't be Staggered
     log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored, unshaken)":" and is Staggered"}.`,"l-bad"); }
+  if((t==="full"||t==="partial") && tgt.st.thorns){ damage(e,2,"thorns"); log(`  ${e.name} is torn on ${tgt.name}'s thorns: 2.`,"l-part"); }
 }
 
 function endOfRound(){
@@ -392,16 +500,44 @@ function endOfRound(){
       const pin = u.st.rooted ? " — Rooted, nowhere to run" : "";
       log(`  ${u.name} stands in fire at ${BANDS[u.band]}: 3${pin}.`,"l-fire"); }
   });
-  // c. stance upkeep — sustaining living metal bleeds Strain; can't pay = it reverts
+  // b2. Gravity Well — drag enemies inward, then crush + Heavy those caught
+  if(S.well>=0){
+    liveEnemies().forEach(e=>{
+      if(e.band!==S.well && !e.st.rooted){ e.band += (e.band>S.well ? -1 : 1);
+        log(`  ${e.name} is dragged toward the well, now ${BANDS[e.band]}.`,"l-root"); }
+    });
+    liveEnemies().filter(e=>e.band===S.well).forEach(e=>{ damage(e,3,"the Gravity Well"); setSt(e,"heavy",1);
+      log(`  ${e.name} is crushed in the well at ${BANDS[S.well]}: 3 + Heavy.`,"l-root"); });
+  }
+  // b3. Glasstorm zones — abrade + Slow + Blind + Shred
+  S.glass.forEach((n,b)=>{ if(n>0){
+    liveEnemies().filter(e=>e.band===b).forEach(e=>{ e.st.shred=Math.min(6,(e.st.shred||0)+1);
+      damage(e,2,"the Glasstorm"); setSt(e,"slowed",1); setSt(e,"blinded",1);
+      log(`  ${e.name} is flayed in the Glasstorm at ${BANDS[b]}: 2 + Slow + Blind + Shred ${e.st.shred}.`,"l-fire"); });
+  }});
+  // b4. Overgrown zones — grip occupants, then age + spread a tendril to each neighbour
+  { const next=[0,0,0];
+    S.grown.forEach((n,b)=>{ if(n>0){
+      liveEnemies().filter(e=>e.band===b).forEach(e=>{ damage(e,2,"Overgrowth"); setSt(e,"entangled",1);
+        log(`  ${e.name} is gripped by Overgrowth at ${BANDS[b]}: 2 + Entangled.`,"l-root"); });
+      if(n-1>0) next[b]=Math.max(next[b],n-1);
+      if(n>=2){ [b-1,b+1].forEach(nb=>{ if(nb>=0&&nb<3) next[nb]=Math.max(next[nb],1); }); } // only vigorous growth spreads, then it fades
+    }});
+    S.grown=next;
+  }
+  // c. upkeep — Metal stance AND Gravity Well bleed Strain each round; can't pay = it drops
   S.units.filter(alive).forEach(u=>{
-    if(u.stance){ u.strain++;
-      if(u.strain>u.resolve){ u.strain=u.resolve; u.stance=false;
-        log(`  ${u.name} can't sustain the metal — it sloughs off (stance dropped).`,"l-bad"); }
-      else log(`  ${u.name} holds the metal form (Strain ${u.strain}/${u.resolve}).`,"l-miss"); }
+    if(u.stance || u.well){ u.strain++;
+      if(u.strain>u.resolve){ u.strain=u.resolve;
+        if(u.stance){ u.stance=false; log(`  ${u.name} can't sustain the metal — it sloughs off.`,"l-bad"); }
+        if(u.well){ u.well=false; S.well=-1; log(`  ${u.name} can't hold the well — it collapses.`,"l-bad"); }
+      } else log(`  ${u.name} sustains (Strain ${u.strain}/${u.resolve}).`,"l-miss"); }
   });
-  // d. tick durations (stagger is consumed on use, not here)
+  if(S.well>=0 && !S.units.some(u=>alive(u)&&u.well)) S.well=-1;   // collapse if its owner fell
+  // d. tick durations (stagger consumed on use) + zone countdowns
   S.fire=S.fire.map(n=>Math.max(0,n-1));
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen"].forEach(k=>{
+  S.glass=S.glass.map(n=>Math.max(0,n-1));
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });
 
   // win/lose
@@ -443,9 +579,18 @@ function unitCard(u){
     if(u.st.taunting) chips.push(`<span class="chip taunt">⚑ Taunting ${u.st.taunting}</span>`);
     if(u.st.regen) chips.push(`<span class="chip regen">✚ Regenerating ${u.st.regen}</span>`);
     if(u.st.bleeding) chips.push(`<span class="chip bleed">🩸 Bleeding ${u.st.bleeding}</span>`);
+    if(u.st.heavy) chips.push(`<span class="chip rooted">⬇ Heavy ${u.st.heavy}</span>`);
+    if(u.st.entangled) chips.push(`<span class="chip rooted">🌿 Entangled ${u.st.entangled}</span>`);
+    if(u.st.blinded) chips.push(`<span class="chip slowed">😵 Blinded ${u.st.blinded}</span>`);
+    if(u.st.shred) chips.push(`<span class="chip bleed">◈ Shred ${u.st.shred}</span>`);
+    if(u.st.thorns) chips.push(`<span class="chip regen">❧ Thorns ${u.st.thorns}</span>`);
+    if((u.barrier||0)>0) chips.push(`<span class="chip armor">◇ Barrier ${u.barrier}</span>`);
     if(S.fire[u.band]>0) chips.push(u.affinity==="fire"
       ? `<span class="chip stoked">🔥 Stoked +1</span>`
       : `<span class="chip fire">🔥 in fire</span>`);
+    if(S.well===u.band) chips.push(`<span class="chip rooted">🌀 in the well</span>`);
+    if(S.grown[u.band]>0) chips.push(`<span class="chip regen">🌿 overgrown</span>`);
+    if(S.glass[u.band]>0) chips.push(`<span class="chip bleed">◈ glasstorm</span>`);
   } else chips.push(`<span class="chip">Downed</span>`);
   const click = tgtable ? `onclick="pick('${u.id}')"` : "";
   return `<div class="${cls.join(" ")}" ${click}>
@@ -460,6 +605,7 @@ function unitCard(u){
 function render(){
   document.getElementById("doom").textContent=S.doom;
   document.getElementById("round").textContent=S.round;
+  document.getElementById("teamlabel").textContent=S.team;
   document.getElementById("doompips").textContent="◆".repeat(Math.max(0,S.doom));
   document.getElementById("party").innerHTML  = party().map(unitCard).join("");
   document.getElementById("enemies").innerHTML= enemies().map(unitCard).join("");
@@ -471,7 +617,8 @@ function render(){
 
   if(S.over){
     head.innerHTML=`<span class="win ${S.over==="win"?"w":"l"}">${S.over==="win"?"Victory":"Defeat"}</span>`;
-    acts.innerHTML=`<button class="primary" onclick="newGame()">New fight</button>`;
+    acts.innerHTML=`<button class="primary" onclick="newGame(S.team)">New fight</button>`
+      +`<button onclick="newGame(S.team===1?2:1)">Try Team ${S.team===1?2:1}</button>`;
     return;
   }
   if(S.phase!=="party"){ head.textContent="Raiders are acting…"; return; }
@@ -481,17 +628,30 @@ function render(){
   head.innerHTML=`${a.name}'s turn <small style="color:var(--dim)">· ${BANDS[a.band]} · Strain ${a.strain}/${a.resolve}</small>`;
 
   if(S.pending){
-    if(S.pending.type==="scorch"){
-      hint.textContent="Choose a band to set on fire:";
-      acts.innerHTML=BANDS.map((b,i)=>`<button onclick="pick(${i})">${b}${S.fire[i]>0?" 🔥":""}</button>`).join("")
+    const pt=S.pending.type;
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"){
+      hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every Raider there):"
+        : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
+        : "Choose a band to set on fire:";
+      acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
+        +`<button class="ghost" onclick="cancel()">cancel</button>`;
+    } else if(pt==="summon" && S.pending.weaponPick){
+      hint.textContent="Forge a weapon to strike with:";
+      acts.innerHTML=["Flameblade","Maul","Chain","Glaive"].map(w=>`<button onclick="pickWeapon('${w}')">${w}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
     } else {
-      hint.textContent=S.pending.type==="slam" ? "Click a Raider at Engaged or Near to Slam."
-        : S.pending.type==="sledge" ? "Click a Raider at Engaged or Near to Sledge."
-        : S.pending.type==="rend" ? "Click a Raider at Engaged or Near to Rend."
-        : S.pending.type==="haymaker" ? "Click a Raider at Engaged or Near to Haymaker (knocks it back a band)."
-        : S.pending.type==="hurl" ? "Click any Raider to Hurl debris at."
-        : S.pending.type==="graft" ? "Click an ally to heal — or a Downed ally to revive."
+      hint.textContent= pt==="slam" ? "Click a Raider at Engaged or Near to Slam."
+        : pt==="sledge" ? "Click a Raider at Engaged or Near to Sledge."
+        : pt==="rend" ? "Click a Raider at Engaged or Near to Rend."
+        : pt==="haymaker" ? "Click a Raider at Engaged or Near to Haymaker (knocks it back a band)."
+        : pt==="hurl" ? "Click any Raider to Hurl debris at."
+        : pt==="graft" ? "Click an ally to heal — or a Downed ally to revive."
+        : pt==="crush" ? "Click any Raider to Crush (gravity reaches every band)."
+        : pt==="strangle" ? "Click any Raider to Strangle with vines."
+        : pt==="lance" ? "Click any Raider to lance with light."
+        : pt==="aegis" ? "Click an ally to shield with a Barrier."
+        : pt==="cleanse" ? "Click an ally to Cleanse a debuff off."
+        : pt==="summon" ? `Click a Raider at Engaged or Near to strike with the ${S.pending.weapon}.`
         : "Click any Raider to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -516,19 +676,45 @@ function render(){
   } else if(a.role==="Physical"){
     b.push(btn("Haymaker (knockback)","arm('haymaker')"));
     b.push(btn("Hurl Debris","arm('hurl')"));
+  } else if(a.role==="Gravity"){
+    b.push(`<button class="${a.well?"primary":""}" onclick="eventHorizon(U('${a.id}'))">${a.well?"Collapse Well":"Event Horizon"}</button>`);
+    b.push(btn("Crush","arm('crush')"));
+  } else if(a.role==="Overgrowth"){
+    b.push(btn("Strangle","arm('strangle')"));
+    b.push(btn("Thicket",`thicket(U('${a.id}'))`));
+  } else if(a.role==="Glass"){
+    b.push(btn("Flensing Gale","arm('gale')"));
+    b.push(btn("Glasstorm (zone)","arm('glasszone')"));
+  } else if(a.role==="Radiance"){
+    b.push(btn("Aegis (shield)","arm('aegis')"));
+    b.push(btn("Cleanse","arm('cleanse')"));
+    b.push(btn("Radiant Lance","arm('lance')"));
+  } else if(a.role==="Smith"){
+    b.push(btn("Summon Arms","arm('summon')"));
+    b.push(btn("Bulwark (shield)",`bulwarkArms(U('${a.id}'))`));
   }
-  b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance));
-  b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance));
+  b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well));
+  b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well));
   b.push(`<button class="${S.push?"primary":"ghost"}" onclick="togglePush()" title="Spend 1 Strain for +1 to your next check">Push ${S.push?"ON":"OFF"} · +1 / +1 Strain</button>`);
   b.push(`<button class="ghost" onclick="passTurn()">Skip action</button>`);
   acts.innerHTML=b.join("");
   hint.textContent=a.role==="Metal"
     ? "Tank line: Stance: Metal to armor up, then Taunt to pull the Raiders onto you — the others work free while you soak."
     : a.role==="Regen"
-    ? "Medic line: Graft a Regenerating heal onto Steele as he soaks (or revive a Downed ally). Keep your healer out of Ember's fire — it Cauterizes regen."
+    ? "Medic line: Graft a Regenerating heal onto the tank (or revive a Downed ally). Keep the healer out of fire — it Cauterizes regen."
     : a.role==="Physical"
-    ? "Striker line: Haymaker knocks a Raider back a band — into Ember's fire to cook it, or off your line to buy time. Hurl Debris for ranged burst."
-    : "Tip: Root a Raider at Near, then Scorch that band — Ember stands in her own fire (Stoked +1) while it cooks the pinned enemy.";
+    ? "Striker line: Haymaker knocks a Raider back a band — into a fire to cook it, or off your line to buy time. Hurl Debris for ranged burst."
+    : a.role==="Gravity"
+    ? "Tank line: Event Horizon opens a well that drags Raiders onto you and crushes them each round (you can't move while it's up). Crush to pin one."
+    : a.role==="Overgrowth"
+    ? "Controller: Strangle Entangles a Raider and seeds Overgrowth (it spreads to nearby bands). Thicket guards you with Thorns."
+    : a.role==="Glass"
+    ? "Artillery: Flensing Gale rakes a whole band + stacks Shred (they take MORE from everything). Glasstorm lays a lingering hazard."
+    : a.role==="Radiance"
+    ? "Support: Aegis shields an ally (Barrier soaks before HP), Cleanse strips a debuff, Radiant Lance burns + Blinds. Pre-shield the gravity tank."
+    : a.role==="Smith"
+    ? "Striker: Summon Arms — forge the weapon for the moment (Flameblade/Maul/Chain/Glaive). Bulwark forges a shield for yourself."
+    : "Tip: gather the Raiders into one band, hold them there, and reap them.";
 }
 function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
 
@@ -543,9 +729,25 @@ function arm(kind){
   if(kind==="graft")  S.pending={type:"graft",actor:a.id,targets:"ally"};
   if(kind==="haymaker") S.pending={type:"haymaker",actor:a.id,targets:"enemy"};
   if(kind==="hurl")   S.pending={type:"hurl",actor:a.id,targets:"enemy"};
+  if(kind==="crush")    S.pending={type:"crush",actor:a.id,targets:"enemy"};
+  if(kind==="strangle") S.pending={type:"strangle",actor:a.id,targets:"enemy"};
+  if(kind==="gale")     S.pending={type:"gale",actor:a.id};
+  if(kind==="glasszone")S.pending={type:"glasszone",actor:a.id};
+  if(kind==="aegis")    S.pending={type:"aegis",actor:a.id,targets:"ally"};
+  if(kind==="cleanse")  S.pending={type:"cleanse",actor:a.id,targets:"ally"};
+  if(kind==="lance")    S.pending={type:"lance",actor:a.id,targets:"enemy"};
+  if(kind==="summon")   S.pending={type:"summon",actor:a.id,weaponPick:true};
   render();
 }
 function cancel(){ S.pending=null; render(); }
+function pickBand(i){
+  if(!S.pending) return; const a=U(S.pending.actor), t=S.pending.type;
+  if(t==="scorch") scorch(a,i);
+  else if(t==="gale") flensingGale(a,i);
+  else if(t==="glasszone") glassZone(a,i);
+}
+function pickWeapon(w){ if(!S.pending) return; S.pending.weapon=w; S.pending.weaponPick=false; S.pending.targets="enemy"; render(); }
+function zoneMark(i){ let m=""; if(S.fire[i]>0)m+="🔥"; if(S.grown[i]>0)m+="🌿"; if(S.glass[i]>0)m+="◈"; if(S.well===i)m+="🌀"; return m?(" "+m):""; }
 function togglePush(){ if(!S.over && S.phase==="party"){ S.push=!S.push; render(); } }
 function passTurn(){ const a=activeActor(); if(a){ log(`${a.name} holds.`,"l-miss"); finishAction(a); } }
 function pick(arg){
@@ -554,6 +756,15 @@ function pick(arg){
   if(type==="scorch"){ scorch(a,arg); return; }
   const target=U(arg);
   if(type==="graft"){ graft(a,target); return; }   // ally target (may be Downed)
+  if(type==="aegis"){ aegis(a,target); return; }
+  if(type==="cleanse"){ cleanse(a,target); return; }
+  if(type==="crush"){ crush(a,target); return; }
+  if(type==="strangle"){ strangle(a,target); return; }
+  if(type==="lance"){ radiantLance(a,target); return; }
+  if(type==="summon"){
+    if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
+    summonArms(a,target); return;
+  }
   if(type==="slam"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Cement Slam only hits Engaged or Near."; return; }
     slam(a,target);
