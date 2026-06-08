@@ -51,6 +51,10 @@ Plus five cross-cutting systems:
   data you can draw from. Design invariant: **no dead entries** — every drawable Fortune is
   viable, so variance is *direction*, never *quality*. Anti-luck (`Sealed Fate`) suppresses the
   draw the way heal-suppression zeroes a HoT.
+- **Spreading zones** (Overgrowth) — a zone tag need not be static. Most zones (`On-Fire`,
+  `Gravity Well`) sit where placed and tick down; an `Overgrown` zone carries a **growth rule** and
+  **propagates to an adjacent band each round**. The engine re-evaluates zones per round and lets
+  them expand — terrain with momentum. Countered by *denial* (barren ground) and *fire* (burns it).
 
 ## Master tag dictionary
 
@@ -65,7 +69,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Staggered` · `Knockback` · `Corroded`* · `Injury` · `Shocked`* · `Guarded` · `Conductive` ·
 `No-Bleed` · `Regenerating` *(first heal-over-time — a signed DoT)* · `Cauterized` ·
 `Grievous` · `Exhausted` · `Downed` · `Toxic` · `Lucky`/`Blessed` · `Jinxed` · `Sealed Fate`* ·
-`Taunting` *(aggro — enemy target-selection is forced onto the taunter; first surfaced in the combat MVP)*
+`Taunting` *(aggro — enemy target-selection is forced onto the taunter; first surfaced in the combat MVP)* ·
+`Entangled` *(`Rooted` + a constricting DoT)* · `Thorns` *(retaliation — strikers eat damage)*
 
 ### Stances / modes
 `Stance:Metal` *(first stance tag — double-edged; see Stances system above)*
@@ -85,7 +90,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `On-Fire` · `Water Source` · `Rain` · `Open Sky` · `Enclosed` · `Plant-Rich` ·
 `Metal Structures` · `Gas` · `Cement Source` · `Rubble` · `Concrete` · `Urban` · `Chasm` ·
 `Flooding` · `Warehouse` · `Featureless` · `Unstable` · `Fragile` · `Submerged` ·
-`Collapse` · `Barred` · `Locked` · `Electrified`* · `Hazard` · `Gravity Well` *(pulls + weighs each round)*
+`Collapse` · `Barred` · `Locked` · `Electrified`* · `Hazard` · `Gravity Well` *(pulls + weighs each round)* ·
+`Overgrown` *(spreading — propagates to an adjacent band each round)*
 
 ### Objects (for scavenge/throw)
 `Object` · `Mass` · `Car` · `Lamppost` · `Debris`
@@ -96,7 +102,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Physical` · `Melee` · `Object-Wielder` · `Range-Collapser` · `Armor-Pierce` · `No-Material` ·
 `Morph` · `Stance-Based` · `Metal` · `Biological` · `Self-Sustain` · `Metabolize` ·
 `Conceptual` · `Luck` · `Drawn-Kit` · `Fortune` · `Gamble` · `Variance` ·
-`Gravity` · `Pull` *(forced movement toward — inverse of `Knockback`)* · `Singularity`
+`Gravity` · `Pull` *(forced movement toward — inverse of `Knockback`)* · `Singularity` ·
+`Spreading` *(zone growth rule — expands to an adjacent band each round)*
 
 ## Combo chains confirmed (cross-power)
 
