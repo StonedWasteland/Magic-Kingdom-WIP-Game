@@ -345,13 +345,19 @@ function aegis(actor,target){            // Radiance: Barrier shield on an ally 
   log(`${actor.name} shields ${target.name} — Barrier ${target.barrier} (soaks damage before HP).`,"l-hit");
   finishAction(actor);
 }
-function cleanse(actor,target){          // Radiance: strip one debuff off an ally (the dispel verb)
+function cleanse(actor,target){          // Radiance "Unmake": purge ALL tags (buffs + debuffs), heal per tag
   spend(actor,1);
-  const bad=["burning","bleeding","slowed","rooted","entangled","heavy","shred","blinded","stagger"];
-  let cleared=null;
-  for(const k of bad){ if(target.st[k]){ cleared=k; target.st[k]=0; break; } }
-  if(cleared) log(`${actor.name} cleanses ${cleared} from ${target.name}.`,"l-hit");
-  else log(`${actor.name} finds nothing to cleanse on ${target.name}.`,"l-miss");
+  let removed=0;
+  ["burning","bleeding","slowed","rooted","entangled","heavy","blinded","shred","stagger","regen","taunting","thorns"]
+    .forEach(k=>{ if(target.st[k]){ target.st[k]=0; removed++; } });
+  if((target.barrier||0)>0){ target.barrier=0; removed++; }
+  if(target.stance){ target.stance=false; removed++; }
+  if(target.well){ target.well=false; S.well=-1; removed++; }
+  if(removed){
+    let healed=0;
+    if(alive(target)){ const b=target.hp; target.hp=Math.min(target.max,target.hp+removed*2); healed=target.hp-b; }
+    log(`${actor.name} UNMAKES ${removed} tag${removed>1?"s":""} on ${target.name} — all magic stripped${healed?`, heals ${healed}`:""}.`,"l-hit");
+  } else log(`${actor.name} finds no magic to unmake on ${target.name}.`,"l-miss");
   finishAction(actor);
 }
 function radiantLance(actor,target){     // Radiance: Light damage + Blind
@@ -678,7 +684,7 @@ function render(){
         : pt==="strangle" ? "Click any Raider to Strangle with vines."
         : pt==="lance" ? "Click any Raider to lance with light."
         : pt==="aegis" ? "Click an ally to shield with a Barrier."
-        : pt==="cleanse" ? "Click an ally to Cleanse a debuff off."
+        : pt==="cleanse" ? "Click an ally to Unmake — purge ALL their tags (buffs & debuffs), heal 2 per tag."
         : pt==="summon" ? `Click a Raider at Engaged or Near to strike with the ${S.pending.weapon}.`
         : "Click any Raider to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -715,7 +721,7 @@ function render(){
     b.push(btn("Glasstorm (zone)","arm('glasszone')"));
   } else if(a.role==="Radiance"){
     b.push(btn("Aegis (shield)","arm('aegis')"));
-    b.push(btn("Cleanse","arm('cleanse')"));
+    b.push(btn("Unmake (purge + heal)","arm('cleanse')"));
     b.push(btn("Radiant Lance","arm('lance')"));
   } else if(a.role==="Smith"){
     b.push(btn("Summon Arms","arm('summon')"));
@@ -739,7 +745,7 @@ function render(){
     : a.role==="Glass"
     ? "Artillery: Flensing Gale rakes a whole band + stacks Shred (they take MORE from everything). Glasstorm lays a lingering hazard."
     : a.role==="Radiance"
-    ? "Support: Aegis shields an ally (Barrier soaks before HP), Cleanse strips a debuff, Radiant Lance burns + Blinds. Pre-shield the gravity tank."
+    ? "Support: Aegis shields an ally (Barrier soaks before HP), Unmake purges ALL an ally's tags and heals 2 per tag (clears debuffs — but their buffs too), Radiant Lance burns + Blinds."
     : a.role==="Smith"
     ? "Striker: Summon Arms — forge the weapon for the moment (Flameblade/Maul/Chain/Glaive). Bulwark forges a shield for yourself."
     : "Tip: gather the Raiders into one band, hold them there, and reap them.";

@@ -16,18 +16,25 @@ a radiance that strips the dark of everywhere it hides.*
 > drains as it does. The engine routes damage through `Barrier` first, then the body. A third,
 > distinct defensive layer — and the complement to Wren: she heals what broke, Radiance keeps it from
 > breaking.
-> **(2) Cleanse — the dispel verb.** Everything so far *applies* tags. `Cleanse` **removes** one — peel
-> `Burning`, `Bleeding`, `Slowed`, `Shred`, `Entangled` off an ally. The inverse operation, and the
-> answer to enemy debuffers. (Note: unlike Wren's regen, Radiance is *light*, not flesh — fire doesn't
-> `Cauterize` it. The fire-proof support.)
+> **(2) Unmake — the dispel verb, weaponized.** Everything so far *applies* tags. **`Unmake`**
+> **removes** them — and not surgically: it strips **every** tag off a target, *buffs and debuffs
+> alike*, then **heals 2 HP per tag unmade** (light feeding on the magic it unweaves). On a
+> debuff-drowned ally it's a big cleanse-and-heal; the honest cost is it also wipes that ally's own
+> `Barrier`/stance/well — so it's a reset, not a scalpel. (Designed against buffed enemies too — it'll
+> feast hardest once Pack Alpha and other buff-stacking foes exist; it mirrors the Disruptor exactly.)
+> (Note: unlike Wren's regen, Radiance is *light*, not flesh — fire doesn't `Cauterize` it. The
+> fire-proof support.)
 
 ## Expressions
 
-### ◈ Support — Aegis *(starter)*
-Project a `Barrier` onto an ally: an absorption pool that eats the next chunk of incoming damage
-before their HP. Or spend the same light to **`Cleanse`** one debuff off them instead — shield, or
-purify.
-- **Cost:** medium Strain.
+### ◈ Support — Aegis & Unmake *(starter)*
+Two faces of the guardian's light:
+- **Aegis** — project a `Barrier` onto an ally: an absorption pool that eats incoming damage before
+  their HP.
+- **Unmake** — strip **all** tags off a target (buffs *and* debuffs) and **heal 2 per tag removed.**
+  A cleanse-and-heal for a debuff-laden ally (you also wipe their own buffs — a reset, not a scalpel);
+  a buff-feast against enemies. The mirror of the Disruptor.
+- **Cost:** medium Strain each.
 
 ### ◈ Defense — Sanctuary
 Raise a radiant aura on your band: allies inside take reduced damage, and anyone Engaged with you
