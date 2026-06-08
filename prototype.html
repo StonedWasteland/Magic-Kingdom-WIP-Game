@@ -336,12 +336,12 @@ function flensingGale(actor,band){       // Glasstorm: band AoE — damage all e
 function glassZone(actor,band){          // Glasstorm: lay a Glasstorm hazard on a band
   spend(actor,1);
   S.glass[band]=2;
-  log(`${actor.name} whips a Glasstorm across ${BANDS[band]} — abrasion + Slow + Blind + Shred to anything caught, 2 rounds.`,"l-fire");
+  log(`${actor.name} whips a Glasstorm across ${BANDS[band]} — abrasion + Slow + Shred to anything caught, 2 rounds.`,"l-fire");
   finishAction(actor);
 }
 function aegis(actor,target){            // Radiance: Barrier shield on an ally (preventive HP)
   spend(actor,1);
-  target.barrier=(target.barrier||0)+6;
+  target.barrier=(target.barrier||0)+5;
   log(`${actor.name} shields ${target.name} — Barrier ${target.barrier} (soaks damage before HP).`,"l-hit");
   finishAction(actor);
 }
@@ -460,7 +460,7 @@ function enemyAttack(e){
     const owner=S.units.find(u=>alive(u)&&u.well); if(owner) targets=[owner];
   }
   const tgt=targets[Math.floor(Math.random()*targets.length)];
-  let mod=0; if(e.st.slowed) mod-=1; if(e.st.blinded) mod-=2;   // Blinded enemies aim worse
+  let mod=0; if(e.st.slowed) mod-=1; if(e.st.blinded) mod-=1;   // Blinded enemies aim worse (trimmed from -2)
   const r=roll2(); const total=r.sum+mod; const t=tier(total);
   log(`${e.name} swings at ${tgt.name}${taunter?" (taunted)":""}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
       t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
@@ -512,8 +512,8 @@ function endOfRound(){
   // b3. Glasstorm zones — abrade + Slow + Blind + Shred
   S.glass.forEach((n,b)=>{ if(n>0){
     liveEnemies().filter(e=>e.band===b).forEach(e=>{ e.st.shred=Math.min(6,(e.st.shred||0)+1);
-      damage(e,2,"the Glasstorm"); setSt(e,"slowed",1); setSt(e,"blinded",1);
-      log(`  ${e.name} is flayed in the Glasstorm at ${BANDS[b]}: 2 + Slow + Blind + Shred ${e.st.shred}.`,"l-fire"); });
+      damage(e,2,"the Glasstorm"); setSt(e,"slowed",1);   // Blind removed — was stacking into auto-miss
+      log(`  ${e.name} is flayed in the Glasstorm at ${BANDS[b]}: 2 + Slow + Shred ${e.st.shred}.`,"l-fire"); });
   }});
   // b4. Overgrown zones — grip occupants, then age + spread a tendril to each neighbour
   { const next=[0,0,0];
@@ -537,6 +537,7 @@ function endOfRound(){
   // d. tick durations (stagger consumed on use) + zone countdowns
   S.fire=S.fire.map(n=>Math.max(0,n-1));
   S.glass=S.glass.map(n=>Math.max(0,n-1));
+  S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
   S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });
 
@@ -581,7 +582,7 @@ function unitCard(u){
     if(u.st.bleeding)chips.push(chip("bleed",`🩸 Bleeding ${u.st.bleeding}`,"Bleeding — 2 damage at end of round."));
     if(u.st.heavy)   chips.push(chip("rooted",`⬇ Heavy ${u.st.heavy}`,"Heavy — pinned by gravity; can't advance."));
     if(u.st.entangled)chips.push(chip("rooted",`🌿 Entangled ${u.st.entangled}`,"Entangled — gripped by vines; can't move."));
-    if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −2 to this unit's attack rolls."));
+    if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −1 to this unit's attack rolls."));
     if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
     if(u.st.thorns)  chips.push(chip("regen",`❧ Thorns ${u.st.thorns}`,"Thorns — anyone who hits this unit takes 2 damage back."));
     if((u.barrier||0)>0) chips.push(chip("armor",`◇ Barrier ${u.barrier}`,`Barrier — absorbs the next ${u.barrier} damage before HP is touched.`));
@@ -590,7 +591,7 @@ function unitCard(u){
       : chip("fire","🔥 in fire","Standing in an On-Fire band — 3 fire damage at end of round."));
     if(S.well===u.band)   chips.push(chip("rooted","🌀 in the well","Gravity Well — dragged toward the anchor and crushed (3 + Heavy) each round."));
     if(S.grown[u.band]>0) chips.push(chip("regen","🌿 overgrown","Overgrown band — enemies here take 2 + Entangled each round; it spreads to nearby bands."));
-    if(S.glass[u.band]>0) chips.push(chip("bleed","◈ glasstorm","Glasstorm band — 2 damage + Slow + Blind + Shred each round."));
+    if(S.glass[u.band]>0) chips.push(chip("bleed","◈ glasstorm","Glasstorm band — 2 damage + Slow + Shred each round."));
   } else chips.push(chip("","Downed","Downed — out of the fight. A medic (Wren's Graft) can revive."));
   const click = tgtable ? `onclick="pick('${u.id}')"` : "";
   return `<div class="${cls.join(" ")}" ${click}>
