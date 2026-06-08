@@ -207,8 +207,17 @@ function activeActor(){ return party().find(u=>alive(u)&&!u.acted) || null; }
 function finishAction(actor){
   actor.acted=true;
   S.pending=null; S.push=false;
+  if(checkEnd()) return;                                       // win/lose the instant it lands — don't stall
   if(!activeActor()){ render(); setTimeout(enemyTurn,450); }   // party done → enemies
   else render();
+}
+// End the fight the moment a side is wiped, whoever's "turn" it nominally is.
+// (end-of-round still backstops deaths from DoTs and the doom clock.)
+function checkEnd(){
+  if(S.over) return true;
+  if(!liveEnemies().length){ finish("win"); return true; }
+  if(!liveParty().length){ finish("lose","Both Gifted are down."); return true; }
+  return false;
 }
 
 function move(actor,dir){               // dir -1 advance, +1 retreat
@@ -301,13 +310,15 @@ function unitCard(u){
   if(S.phase==="party" && !S.over && activeActor()===u) cls.push("active");
   if(tgtable) cls.push("targetable");
   const chips=[];
-  if(u.st.rooted)  chips.push(`<span class="chip rooted">Rooted ${u.st.rooted}</span>`);
-  if(u.st.slowed)  chips.push(`<span class="chip slowed">Slowed ${u.st.slowed}</span>`);
-  if(u.st.burning) chips.push(`<span class="chip burning">Burning ${u.st.burning}</span>`);
-  if(u.st.stagger) chips.push(`<span class="chip stagger">Staggered</span>`);
-  if(alive(u) && S.fire[u.band]>0) chips.push(u.affinity==="fire"
-    ? `<span class="chip stoked">🔥 Stoked +1</span>`
-    : `<span class="chip fire">🔥 in fire</span>`);
+  if(alive(u)){
+    if(u.st.rooted)  chips.push(`<span class="chip rooted">Rooted ${u.st.rooted}</span>`);
+    if(u.st.slowed)  chips.push(`<span class="chip slowed">Slowed ${u.st.slowed}</span>`);
+    if(u.st.burning) chips.push(`<span class="chip burning">Burning ${u.st.burning}</span>`);
+    if(u.st.stagger) chips.push(`<span class="chip stagger">Staggered</span>`);
+    if(S.fire[u.band]>0) chips.push(u.affinity==="fire"
+      ? `<span class="chip stoked">🔥 Stoked +1</span>`
+      : `<span class="chip fire">🔥 in fire</span>`);
+  } else chips.push(`<span class="chip">Downed</span>`);
   const click = tgtable ? `onclick="pick('${u.id}')"` : "";
   return `<div class="${cls.join(" ")}" ${click}>
     <span class="band">${alive(u)?BANDS[u.band]:"—"}</span>
