@@ -2,7 +2,7 @@
 
 *Folder working name. In-doc title is currently "Magic Worlds" — final title TBD.*
 
-A browser-based, text-driven tactical party RPG. Command a four-character squad of "Gifted"
+A browser-based, text-driven tactical party RPG. Command a five-character squad of "Gifted"
 on energy-gated expeditions against a slow-burn invasion (the Sundering). Blends XCOM's doom
 clock, Darkest Dungeon's expedition loop, Torn's text-first browser presentation, and
 Worm-grade idiosyncratic powers.

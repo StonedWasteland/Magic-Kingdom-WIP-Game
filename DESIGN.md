@@ -9,7 +9,7 @@
 
 ## 1. High Concept
 
-A browser-based, text-driven tactical RPG in which the player commands a four-character squad of "Gifted" — people born with bespoke magical powers — in a world facing a slow-burn invasion from somewhere beyond reality. The game blends:
+A browser-based, text-driven tactical RPG in which the player commands a five-character squad of "Gifted" — people born with bespoke magical powers — in a world facing a slow-burn invasion from somewhere beyond reality. The game blends:
 
 - **XCOM:** turn-based squad combat with escalating threat and a meta-layer doom clock
 - **Torn:** browser-friendly, energy-gated, text-first presentation

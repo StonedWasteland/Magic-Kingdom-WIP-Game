@@ -76,7 +76,7 @@
 <div class="sub">2d6 · 10+ full / 7–9 partial / 6− fail · lock it, then burn it · prove the tags talk.</div>
 
 <div class="topbar">
-  <div class="doom">DOOM <b id="doom">7</b> &nbsp;<span class="pip" id="doompips"></span></div>
+  <div class="doom">DOOM <b id="doom">8</b> &nbsp;<span class="pip" id="doompips"></span></div>
   <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
 </div>
 
@@ -109,7 +109,7 @@ const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 let S;
 function newGame(){
   S = {
-    round:1, doom:7, phase:"party", pending:null, over:null, push:false,
+    round:1, doom:8, phase:"party", pending:null, over:null, push:false,
     fire:[0,0,0],                                  // On-Fire rounds-left per band
     units:[
       { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22,
@@ -122,6 +122,8 @@ function newGame(){
         affinity:"fire" },                         // reads On-Fire/Burning as a buff, not damage
       { id:"wren", name:"Wren", role:"Regen", side:"party", hp:18,max:18,
         resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+      { id:"atlas", name:"Atlas", role:"Physical", side:"party", hp:20,max:20,
+        resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
       { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16,
         band:1, st:{}, acted:false },
       { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16,
@@ -130,10 +132,12 @@ function newGame(){
         band:2, st:{}, acted:false },              // starts Far — staggered arrival
       { id:"r4", name:"Raider D", role:"melee", side:"enemy", hp:16,max:16,
         band:2, st:{}, acted:false },
+      { id:"r5", name:"Raider E", role:"melee", side:"enemy", hp:16,max:16,
+        band:2, st:{}, acted:false },
     ],
   };
   document.getElementById("log").innerHTML = "";
-  log("A fresh fight. Four Raiders close in. Steele taunts and tanks, Mason & Ember run the fire combo, and Wren keeps the wounded standing — heal the tank, revive the fallen.", "l-round");
+  log("Full squad, five Raiders. Steele taunts & tanks, Mason & Ember run the fire combo, Wren keeps everyone standing, and Atlas knocks Raiders around — into the fire, or off your line.", "l-round");
   render();
 }
 
@@ -251,6 +255,29 @@ function rend(actor,target){             // Regeneration offense: Slashing + Ble
   else if(t==="partial"){ damage(target,3,"Slashing"); log(`  ${target.name} takes 3 Slashing.`,"l-part"); }
   else { damage(target,3,"Slashing"); setSt(target,"bleeding",3);
     log(`  ${target.name} takes 3 Slashing + is BLEEDING (2/round).`,"l-hit"); }
+  finishAction(actor);
+}
+function haymaker(actor,target){         // Super Strength: Crushing + Knockback — forced movement
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s haymaker whiffs past ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Crushing"); log(`  ${target.name} takes 4 Crushing.`,"l-part"); }
+  else { damage(target,5,"Crushing");
+    if(alive(target) && target.band<2){ target.band++;
+      const fire = S.fire[target.band]>0 ? ` — KNOCKED into the fire at ${BANDS[target.band]}!` : ` — knocked back to ${BANDS[target.band]}.`;
+      log(`  ${target.name} takes 5 Crushing${fire}`,"l-hit"); }
+    else log(`  ${target.name} takes 5 Crushing.`,"l-hit"); }
+  finishAction(actor);
+}
+function hurl(actor,target){             // Super Strength: rip up debris and throw — ranged Crushing
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s throw sails wide of ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Crushing"); log(`  ${target.name} takes 4 Crushing.`,"l-part"); }
+  else { damage(target,6,"Crushing"); setSt(target,"stagger",1);
+    log(`  ${target.name} takes 6 Crushing + Staggered by the impact.`,"l-hit"); }
   finishAction(actor);
 }
 
@@ -462,6 +489,8 @@ function render(){
       hint.textContent=S.pending.type==="slam" ? "Click a Raider at Engaged or Near to Slam."
         : S.pending.type==="sledge" ? "Click a Raider at Engaged or Near to Sledge."
         : S.pending.type==="rend" ? "Click a Raider at Engaged or Near to Rend."
+        : S.pending.type==="haymaker" ? "Click a Raider at Engaged or Near to Haymaker (knocks it back a band)."
+        : S.pending.type==="hurl" ? "Click any Raider to Hurl debris at."
         : S.pending.type==="graft" ? "Click an ally to heal — or a Downed ally to revive."
         : "Click any Raider to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -484,6 +513,9 @@ function render(){
     b.push(btn("Graft (heal / revive)","arm('graft')"));
     b.push(btn("Mend Self",`mendSelf(U('${a.id}'))`));
     b.push(btn("Rend","arm('rend')"));
+  } else if(a.role==="Physical"){
+    b.push(btn("Haymaker (knockback)","arm('haymaker')"));
+    b.push(btn("Hurl Debris","arm('hurl')"));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance));
@@ -494,6 +526,8 @@ function render(){
     ? "Tank line: Stance: Metal to armor up, then Taunt to pull the Raiders onto you — the others work free while you soak."
     : a.role==="Regen"
     ? "Medic line: Graft a Regenerating heal onto Steele as he soaks (or revive a Downed ally). Keep your healer out of Ember's fire — it Cauterizes regen."
+    : a.role==="Physical"
+    ? "Striker line: Haymaker knocks a Raider back a band — into Ember's fire to cook it, or off your line to buy time. Hurl Debris for ranged burst."
     : "Tip: Root a Raider at Near, then Scorch that band — Ember stands in her own fire (Stoked +1) while it cooks the pinned enemy.";
 }
 function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
@@ -507,6 +541,8 @@ function arm(kind){
   if(kind==="sledge") S.pending={type:"sledge",actor:a.id,targets:"enemy"};
   if(kind==="rend")   S.pending={type:"rend",actor:a.id,targets:"enemy"};
   if(kind==="graft")  S.pending={type:"graft",actor:a.id,targets:"ally"};
+  if(kind==="haymaker") S.pending={type:"haymaker",actor:a.id,targets:"enemy"};
+  if(kind==="hurl")   S.pending={type:"hurl",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -528,7 +564,10 @@ function pick(arg){
   } else if(type==="rend"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Rend hits Engaged or Near."; return; }
     rend(a,target);
-  }
+  } else if(type==="haymaker"){
+    if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Haymaker hits Engaged or Near."; return; }
+    haymaker(a,target);
+  } else if(type==="hurl"){ hurl(a,target); }
 }
 
 newGame();

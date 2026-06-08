@@ -160,6 +160,19 @@ in an On-Fire band is **Cauterized** — its `Regenerating` is suppressed that r
 medic out of Ember's fire, and the tank+healer pairing (Wren tops up Steele while he soaks the
 taunt) just *works* — two powers' tags interacting with nothing special-cased between them.
 
+## Striker & forced movement — moving things against their will
+
+Atlas (Super Strength) tests the last untested verb: **forced movement**. **Haymaker** deals
+Crushing and, on a full hit, **Knockback** — shoves the Raider one band toward Far. That's not a
+new system so much as the range bands finally being *acted on*: knock an attacker off your line to
+reset its advance (soft control, buys doom-clock tempo), or — the combo — knock a Raider **into an
+On-Fire band** so the zone tick cooks it, no special-case "if knocked into fire" code: it's just a
+unit now standing in a hazard band. **Hurl Debris** is the ranged option (heavier Crushing +
+Stagger) for when you'd rather burst than reposition.
+
+> Squad size locked at **5** (was 4 in early DESIGN.md/README — updated): tank, controller,
+> artillery, medic, striker — full role coverage, one slot per starter power.
+
 ## The proof — what a winning line looks like
 
 The slice exists to make this sequence *emerge*, not be scripted:
