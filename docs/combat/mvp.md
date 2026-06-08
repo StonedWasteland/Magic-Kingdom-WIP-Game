@@ -138,6 +138,17 @@ threat by another, with **no special-casing** — the effect just queries the re
 Mason, no affinity, still cooks in the fire — so "don't park the cement-mage in the inferno" stays
 a real positioning decision, consistent with the Pyro-hurts-allies tension in the power docs.
 
+## Tank & aggro — making "hold the line" literal
+
+A tank that can't *compel* attacks is just a durable body. **`Taunting`** is the aggro tag: while a
+unit carries it, enemy target-selection reads it and is forced onto that unit — the Raiders don't
+get to pick the squishy in the back. Paired with **`Stance:Metal`** (a persistent toggle: `Armored`
+= −2 to every incoming hit and immune to `Staggered`, but `Heavy` so it can't move and bleeds
+upkeep Strain each round), the tank does its whole job in two tags: *make them hit me* (`Taunting`)
+and *make it not hurt* (`Armored`). Mason and Ember then operate untouched. The cost is real — two
+setup actions plus an ongoing Strain drain — so turtling forever isn't free. Added a third Raider
+so the aggro actually matters: one body can't bottleneck three attackers, but one *taunt* can.
+
 ## The proof — what a winning line looks like
 
 The slice exists to make this sequence *emerge*, not be scripted:

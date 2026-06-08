@@ -46,6 +46,8 @@
   .chip.stagger{color:var(--warn);border-color:var(--warn)}
   .chip.fire{color:var(--ember);border-color:var(--ember);background:#2a1a0e}
   .chip.stoked{color:var(--good);border-color:var(--good);background:#0e2417}
+  .chip.armor{color:#9fb4d0;border-color:#9fb4d0;background:#161a22}
+  .chip.taunt{color:#ff9d5c;border-color:#ff9d5c}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:14px}
   .panel h3{margin:0 0 8px;font-size:13px}
   .acts{display:flex;gap:8px;flex-wrap:wrap}
@@ -108,8 +110,11 @@ function newGame(){
     round:1, doom:6, phase:"party", pending:null, over:null, push:false,
     fire:[0,0,0],                                  // On-Fire rounds-left per band
     units:[
+      { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22,
+        resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false,
+        stance:false },                            // Stance:Metal — Armored + unstaggerable, but Heavy & costs upkeep
       { id:"mason", name:"Mason", role:"Cement",  side:"party", hp:20,max:20,
-        resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+        resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
       { id:"ember", name:"Ember", role:"Pyro",    side:"party", hp:20,max:20,
         resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false,
         affinity:"fire" },                         // reads On-Fire/Burning as a buff, not damage
@@ -117,10 +122,12 @@ function newGame(){
         band:1, st:{}, acted:false },
       { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16,
         band:1, st:{}, acted:false },
+      { id:"r3", name:"Raider C", role:"melee", side:"enemy", hp:16,max:16,
+        band:2, st:{}, acted:false },              // starts Far — staggered arrival
     ],
   };
   document.getElementById("log").innerHTML = "";
-  log("A fresh fight. Two Raiders close from Near. Lock one in the fire — let the other learn why that matters.", "l-round");
+  log("A fresh fight. Three Raiders close in. Steele can Taunt them onto his armored body while Mason locks one in Ember's fire.", "l-round");
   render();
 }
 
@@ -190,6 +197,29 @@ function scorch(actor,band){            // Pyro: auto — set a band On-Fire
   log(`${actor.name} sets the ${BANDS[band]} band ABLAZE — On-Fire for 2 rounds (3/round to anything standing in it).`,"l-fire");
   finishAction(actor);
 }
+function stanceToggle(actor){           // Metal Skin: enter/exit Stance:Metal (costs the action)
+  actor.stance=!actor.stance;
+  if(actor.stance) log(`${actor.name} turns to living metal — ARMORED (−2 to incoming hits, can't be Staggered), but Heavy (can't move) and it costs Strain each round.`,"l-root");
+  else log(`${actor.name} sheds the metal — mobile again.`,"l-miss");
+  finishAction(actor);
+}
+function taunt(actor){                   // the aggro: force the enemy group onto the tank
+  spend(actor,1);
+  setSt(actor,"taunting",2);
+  log(`${actor.name} bellows a challenge — TAUNTING (2 rounds): every Raider must come for him.`,"l-root");
+  finishAction(actor);
+}
+function sledge(actor,target){           // Metal Skin offense: Crushing + Stagger, harder in stance
+  const p=S.push; S.push=false;
+  spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s swing misses ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Crushing");
+    log(`  ${target.name} takes 4 Crushing.`,"l-part"); }
+  else { const d=actor.stance?6:5; damage(target,d,"Crushing"); setSt(target,"stagger",1);
+    log(`  ${target.name} takes ${d} Crushing + Staggered.`,"l-hit"); }
+  finishAction(actor);
+}
 
 function spend(actor,n){
   actor.strain+=n;
@@ -208,6 +238,15 @@ function finishAction(actor){
   actor.acted=true;
   S.pending=null; S.push=false;
   if(checkEnd()) return;                                       // win/lose the instant it lands — don't stall
+  promptParty();
+}
+// Advance to the next party member, auto-skipping the Staggered (from Backlash or enemy hits).
+function promptParty(){
+  let a;
+  while((a=activeActor()) && a.st.stagger){
+    a.st.stagger=0; a.acted=true;
+    log(`${a.name} is Staggered — loses the action.`,"l-bad");
+  }
   if(!activeActor()){ render(); setTimeout(enemyTurn,450); }   // party done → enemies
   else render();
 }
@@ -222,6 +261,7 @@ function checkEnd(){
 
 function move(actor,dir){               // dir -1 advance, +1 retreat
   if(actor.moved) return;
+  if(actor.stance){ log(`${actor.name} is too Heavy in metal to reposition.`,"l-miss"); render(); return; }
   actor.band=Math.min(2,Math.max(0,actor.band+dir));
   actor.moved=true;
   log(`${actor.name} moves to ${BANDS[actor.band]}.`,"l-miss");
@@ -231,7 +271,7 @@ function move(actor,dir){               // dir -1 advance, +1 retreat
 function enemyTurn(){
   S.phase="enemy";
   liveEnemies().forEach(e=>{
-    if(e.st.stagger){ log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
+    if(e.st.stagger){ e.st.stagger=0; log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
     if(e.st.rooted){
       if(e.band===0) enemyAttack(e);
       else log(`${e.name} strains against the cement — Rooted, can't move.`,"l-root");
@@ -249,16 +289,21 @@ function enemyTurn(){
   setTimeout(endOfRound,550);
 }
 function enemyAttack(e){
-  const targets=liveParty(); if(!targets.length) return;
+  let targets=liveParty(); if(!targets.length) return;
+  const taunter=targets.find(u=>u.st.taunting);       // aggro: a Taunting tank forces the swing onto itself
+  if(taunter) targets=[taunter];
   const tgt=targets[Math.floor(Math.random()*targets.length)];
   let mod=0; if(e.st.slowed) mod-=1;
   const r=roll2(); const total=r.sum+mod; const t=tier(total);
-  log(`${e.name} swings at ${tgt.name}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
+  log(`${e.name} swings at ${tgt.name}${taunter?" (taunted)":""}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
       t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
+  const soak = d => tgt.stance ? Math.max(1,d-2) : d;  // Armored: living metal sheds 2 off each hit
   if(t==="fail"){ log(`  ${tgt.name} reads it and slips the blow.`,"l-miss"); }
-  else if(t==="partial"){ damage(tgt,3,"a glancing hit"); log(`  ${tgt.name} takes 3.`,"l-part"); }
-  else { damage(tgt,4,"a solid hit"); setSt(tgt,"stagger",1);
-    log(`  ${tgt.name} takes 4 and is Staggered.`,"l-bad"); }
+  else if(t==="partial"){ const d=soak(3); damage(tgt,d,"a glancing hit");
+    log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored)":""}.`,"l-part"); }
+  else { const d=soak(4); damage(tgt,d,"a solid hit");
+    if(!tgt.stance) setSt(tgt,"stagger",1);            // metal can't be Staggered
+    log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored, unshaken)":" and is Staggered"}.`,"l-bad"); }
 }
 
 function endOfRound(){
@@ -278,9 +323,16 @@ function endOfRound(){
       const pin = u.st.rooted ? " — Rooted, nowhere to run" : "";
       log(`  ${u.name} stands in fire at ${BANDS[u.band]}: 3${pin}.`,"l-fire"); }
   });
-  // c. tick all durations
+  // c. stance upkeep — sustaining living metal bleeds Strain; can't pay = it reverts
+  S.units.filter(alive).forEach(u=>{
+    if(u.stance){ u.strain++;
+      if(u.strain>u.resolve){ u.strain=u.resolve; u.stance=false;
+        log(`  ${u.name} can't sustain the metal — it sloughs off (stance dropped).`,"l-bad"); }
+      else log(`  ${u.name} holds the metal form (Strain ${u.strain}/${u.resolve}).`,"l-miss"); }
+  });
+  // d. tick durations (stagger is consumed on use, not here)
   S.fire=S.fire.map(n=>Math.max(0,n-1));
-  S.units.forEach(u=>{ ["rooted","slowed","burning","stagger"].forEach(k=>{
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });
 
   // win/lose
@@ -292,12 +344,12 @@ function endOfRound(){
   // next round
   S.round++; S.phase="party";
   S.units.forEach(u=>{ u.acted=false; u.moved=false; });
-  render();
+  promptParty();
 }
 
 function finish(result,why){
   S.over=result;
-  if(result==="win") log(`★ VICTORY — both Raiders down, doom at ${S.doom}. The combo carried it.`,"l-hit");
+  if(result==="win") log(`★ VICTORY — the Raiders are down, doom at ${S.doom}.`,"l-hit");
   else log(`☠ DEFEAT — ${why}`,"l-bad");
   render();
 }
@@ -315,6 +367,8 @@ function unitCard(u){
     if(u.st.slowed)  chips.push(`<span class="chip slowed">Slowed ${u.st.slowed}</span>`);
     if(u.st.burning) chips.push(`<span class="chip burning">Burning ${u.st.burning}</span>`);
     if(u.st.stagger) chips.push(`<span class="chip stagger">Staggered</span>`);
+    if(u.stance) chips.push(`<span class="chip armor">⛨ Metal · Armored</span>`);
+    if(u.st.taunting) chips.push(`<span class="chip taunt">⚑ Taunting ${u.st.taunting}</span>`);
     if(S.fire[u.band]>0) chips.push(u.affinity==="fire"
       ? `<span class="chip stoked">🔥 Stoked +1</span>`
       : `<span class="chip fire">🔥 in fire</span>`);
@@ -358,8 +412,8 @@ function render(){
       acts.innerHTML=BANDS.map((b,i)=>`<button onclick="pick(${i})">${b}${S.fire[i]>0?" 🔥":""}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
     } else {
-      hint.textContent=S.pending.type==="slam"
-        ? "Click a Raider at Engaged or Near to Slam."
+      hint.textContent=S.pending.type==="slam" ? "Click a Raider at Engaged or Near to Slam."
+        : S.pending.type==="sledge" ? "Click a Raider at Engaged or Near to Sledge."
         : "Click any Raider to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -370,16 +424,22 @@ function render(){
   const b=[];
   if(a.role==="Cement"){
     b.push(btn("Cement Slam","arm('slam')"));
-  } else {
+  } else if(a.role==="Pyro"){
     b.push(btn("Firebolt","arm('fire')"));
     b.push(btn("Scorch (zone)","arm('scorch')"));
+  } else if(a.role==="Metal"){
+    b.push(`<button class="${a.stance?"primary":""}" onclick="stanceToggle(U('${a.id}'))">${a.stance?"Drop Metal":"Stance: Metal"}</button>`);
+    b.push(btn("Taunt", `taunt(U('${a.id}'))`, a.st.taunting>0));
+    b.push(btn("Sledge","arm('sledge')"));
   }
-  b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0));
-  b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2));
+  b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance));
+  b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance));
   b.push(`<button class="${S.push?"primary":"ghost"}" onclick="togglePush()" title="Spend 1 Strain for +1 to your next check">Push ${S.push?"ON":"OFF"} · +1 / +1 Strain</button>`);
   b.push(`<button class="ghost" onclick="passTurn()">Skip action</button>`);
   acts.innerHTML=b.join("");
-  hint.textContent="Tip: Root a Raider at Near, then Scorch the Near band — Ember stands in her own fire (Stoked +1, unburned) while it cooks the pinned enemy.";
+  hint.textContent=a.role==="Metal"
+    ? "Tank line: Stance: Metal to armor up, then Taunt to pull all three Raiders onto you — Mason & Ember work free while you soak."
+    : "Tip: Root a Raider at Near, then Scorch that band — Ember stands in her own fire (Stoked +1) while it cooks the pinned enemy.";
 }
 function btn(label,fn,dis){ return `<button ${dis?"disabled":""} onclick="${fn}">${label}</button>`; }
 
@@ -389,6 +449,7 @@ function arm(kind){
   if(kind==="slam")   S.pending={type:"slam",actor:a.id,targets:"enemy"};
   if(kind==="fire")   S.pending={type:"fire",actor:a.id,targets:"enemy"};
   if(kind==="scorch") S.pending={type:"scorch",actor:a.id};
+  if(kind==="sledge") S.pending={type:"sledge",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -403,6 +464,10 @@ function pick(arg){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Cement Slam only hits Engaged or Near."; return; }
     slam(a,target);
   } else if(type==="fire"){ firebolt(a,target); }
+  else if(type==="sledge"){
+    if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Sledge hits Engaged or Near."; return; }
+    sledge(a,target);
+  }
 }
 
 newGame();

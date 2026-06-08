@@ -62,7 +62,8 @@ Tags are grouped by category. `*` marks a tag referenced by a designed power but
 `Burning` · `Bleeding` · `Frozen`* · `Chilled`* · `Slowed` · `Rooted` · `Suppressed` ·
 `Staggered` · `Knockback` · `Corroded`* · `Injury` · `Shocked`* · `Guarded` · `Conductive` ·
 `No-Bleed` · `Regenerating` *(first heal-over-time — a signed DoT)* · `Cauterized` ·
-`Grievous` · `Exhausted` · `Downed` · `Toxic` · `Lucky`/`Blessed` · `Jinxed` · `Sealed Fate`*
+`Grievous` · `Exhausted` · `Downed` · `Toxic` · `Lucky`/`Blessed` · `Jinxed` · `Sealed Fate`* ·
+`Taunting` *(aggro — enemy target-selection is forced onto the taunter; first surfaced in the combat MVP)*
 
 ### Stances / modes
 `Stance:Metal` *(first stance tag — double-edged; see Stances system above)*
