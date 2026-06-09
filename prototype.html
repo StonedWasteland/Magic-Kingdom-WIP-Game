@@ -135,8 +135,13 @@ function team2(){ return [
 function freshParty(team){ return team===2?team2():team1(); }
 function foes(fight){                                       // warband, escalating per expedition fight
   const list = raiders();                                  // base: 2 Raiders + Marauder + Brute + Disruptor
-  if(fight>=2) list.push({ id:"r6", name:"Raider F", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false });
-  if(fight>=3) list.push({ id:"bru2", name:"Brute II", role:"brute", side:"enemy", hp:24,max:24, band:2, st:{}, acted:false, ctrlImmune:true });
+  if(fight===2){                                           // more bodies + more ranged pressure
+    list.push({ id:"r6",   name:"Raider F",    role:"melee",  side:"enemy", hp:16,max:16, band:2, st:{}, acted:false });
+    list.push({ id:"mar2", name:"Marauder II", role:"ranged", side:"enemy", hp:12,max:12, band:2, st:{}, acted:false });
+  }
+  if(fight>=3){                                            // the climax — a boss
+    list.push({ id:"warlord", name:"Warlord", role:"brute", side:"enemy", hp:40,max:40, band:2, st:{}, acted:false, ctrlImmune:true, boss:true });
+  }
   return list;
 }
 function introLine(team){
@@ -168,15 +173,16 @@ function startExpedition(team){                             // a 3-fight run; wo
 function nextFight(){                                        // interlude → next battle, carrying the survivors
   const p = party();
   p.forEach(u=>{
-    if(!alive(u)){ u.hp=Math.ceil(u.max*0.4); u.st.down=false; }  // the fallen are dragged on, battered
-    else u.hp=Math.min(u.max, u.hp + Math.ceil(u.max*0.3));       // catch your breath
-    u.strain=0; u.st={}; u.barrier=0; u.stance=false; u.well=false; u.acted=false; u.moved=false; u.sigDone=false;
+    if(!alive(u)){ u.hp=Math.ceil(u.max*0.3); u.st.down=false; }  // the fallen are dragged on, badly battered
+    else u.hp=Math.min(u.max, u.hp + Math.ceil(u.max*0.2));       // a short breather — not a full heal
+    u.strain=0; u.st={}; u.barrier=0; u.stance=false; u.well=false; u.acted=false; u.moved=false;
+    // sigDone is NOT reset — Signatures are once per EXPEDITION, not per fight.
   });
   S.expFight++;
   S.round=1; S.doom=8; S.phase="party"; S.pending=null; S.over=null; S.push=false;
   S.fire=[0,0,0]; S.grown=[0,0,0]; S.glass=[0,0,0]; S.well=-1;
   S.units = p.concat(foes(S.expFight));
-  log(`— Fight ${S.expFight} of ${S.expTotal} — a fresh warband closes in. —`,"l-round");
+  log(`— Fight ${S.expFight} of ${S.expTotal} — ${S.expFight===S.expTotal?"the WARLORD leads the final assault!":"a larger warband closes in."} —`,"l-round");
   promptParty();
 }
 
@@ -589,7 +595,7 @@ function enemyAttack(e){
   log(`${e.name} ${verb} ${tgt.name}${taunter?" (taunted)":""}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
       t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
   const soak = d => tgt.stance ? Math.max(1,d-2) : d;  // Armored: living metal sheds 2 off each hit
-  const big = e.role==="brute" ? 2 : 0;               // the Brute hits hard
+  const big = e.boss ? 3 : (e.role==="brute" ? 2 : 0); // Brutes hit hard; the boss harder
   if(t==="fail"){ log(`  ${tgt.name} ${e.role==="ranged"?"ducks the shot":"slips the blow"}.`,"l-miss"); }
   else if(t==="partial"){ const d=soak(3+big); damage(tgt,d,"a glancing hit");
     log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored)":""}.`,"l-part"); }
@@ -919,16 +925,16 @@ const TIPS = {
   summon:"Summon Arms — forge a weapon: Flameblade (burn), Maul (knockback), Chain (entangle), Glaive (pierce).",
   bulwark:"Bulwark — forge a shield for yourself.",
   // Signatures (★ once per fight)
-  mausoleum:"★ Mausoleum (once/fight) — entomb an enemy so it can't act.",
-  conflagration:"★ Conflagration (once/fight) — detonate every flame on the field; already-burning foes are hit hardest.",
-  livingFortress:"★ Living Fortress (once/fight) — become a bulwark: armor + shield + taunt the whole warband.",
-  undying:"★ Undying (once/fight) — revive every fallen ally and regenerate the whole squad.",
-  wreck:"★ Wrecking Throw (once/fight) — bury one enemy under a massive throw and knock it back.",
-  singularity:"★ Singularity (once/fight) — drag the whole warband into your band and crush them.",
-  worldroot:"★ Worldroot (once/fight) — overgrow every band and Entangle every enemy.",
-  glasstormSig:"★ Glasstorm (once/fight) — a field-wide storm that Shreds and Slows every enemy.",
-  dayspring:"★ Dayspring (once/fight) — shield and heal the whole squad; sear and Blind every enemy.",
-  panoply:"★ Panoply (once/fight) — a storm of conjured blades hits every enemy.",
+  mausoleum:"★ Mausoleum (once/expedition) — entomb an enemy so it can't act.",
+  conflagration:"★ Conflagration (once/expedition) — detonate every flame on the field; already-burning foes are hit hardest.",
+  livingFortress:"★ Living Fortress (once/expedition) — become a bulwark: armor + shield + taunt the whole warband.",
+  undying:"★ Undying (once/expedition) — revive every fallen ally and regenerate the whole squad.",
+  wreck:"★ Wrecking Throw (once/expedition) — bury one enemy under a massive throw and knock it back.",
+  singularity:"★ Singularity (once/expedition) — drag the whole warband into your band and crush them.",
+  worldroot:"★ Worldroot (once/expedition) — overgrow every band and Entangle every enemy.",
+  glasstormSig:"★ Glasstorm (once/expedition) — a field-wide storm that Shreds and Slows every enemy.",
+  dayspring:"★ Dayspring (once/expedition) — shield and heal the whole squad; sear and Blind every enemy.",
+  panoply:"★ Panoply (once/expedition) — a storm of conjured blades hits every enemy.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
