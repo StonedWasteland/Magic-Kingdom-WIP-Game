@@ -79,7 +79,9 @@
   <div class="doom">DOOM <b id="doom">8</b> &nbsp;<span class="pip" id="doompips"></span></div>
   <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
   <div class="doom">TEAM <b id="teamlabel" style="color:var(--ink)">1</b></div>
-  <button onclick="newGame(S.team===2?1:2)" style="margin-left:auto" title="Restart with the other squad">Switch squad ⇄</button>
+  <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
+  <button onclick="startExpedition(S.team)" style="margin-left:auto" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
+  <button onclick="newGame(S.team===2?1:2)" title="Restart a single skirmish with the other squad">Switch squad ⇄</button>
 </div>
 
 <div class="cols">
@@ -130,18 +132,52 @@ function team2(){ return [
   { id:"sol", name:"Sol", role:"Radiance", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"brand", name:"Brand", role:"Smith", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
-function newGame(team){
-  team = team || (S && S.team) || 1;
-  S = {
-    team:team, round:1, doom:8, phase:"party", pending:null, over:null, push:false,
+function freshParty(team){ return team===2?team2():team1(); }
+function foes(fight){                                       // warband, escalating per expedition fight
+  const list = raiders();                                  // base: 2 Raiders + Marauder + Brute + Disruptor
+  if(fight>=2) list.push({ id:"r6", name:"Raider F", role:"melee", side:"enemy", hp:16,max:16, band:2, st:{}, acted:false });
+  if(fight>=3) list.push({ id:"bru2", name:"Brute II", role:"brute", side:"enemy", hp:24,max:24, band:2, st:{}, acted:false, ctrlImmune:true });
+  return list;
+}
+function introLine(team){
+  return team===2
+    ? "TEAM 2 vs a mixed warband (Raiders · Marauder · Brute · Disruptor). Gather → hold → reap — but the Brute ignores control, the Marauder shoots your back line, the Disruptor strips buffs. (Hover an enemy's name for its trait.)"
+    : "TEAM 1 vs a mixed warband (Raiders · Marauder · Brute · Disruptor). Read the foes: the Brute can't be pinned, the Marauder hits from range, the Disruptor strips buffs. (Hover an enemy's name for its trait.)";
+}
+function baseState(team,mode){
+  return { team:team, mode:mode, expFight:1, expTotal: mode==="expedition"?3:1,
+    round:1, doom:8, phase:"party", pending:null, over:null, push:false,
     fire:[0,0,0], grown:[0,0,0], glass:[0,0,0], well:-1,   // zone state per band; well = band index or -1
-    units:(team===2?team2():team1()).concat(raiders()),
-  };
+    units: freshParty(team).concat(foes(1)) };
+}
+function newGame(team){                                     // single skirmish
+  team = team || (S && S.team) || 1;
+  S = baseState(team,"single");
   document.getElementById("log").innerHTML = "";
-  log(team===2
-    ? "TEAM 2 vs a mixed warband (2 Raiders · Marauder · Brute · Disruptor). Gather → hold → reap — but the Brute ignores your control, the Marauder shoots your back line, the Disruptor strips your buffs. Adapt. (Hover an enemy's name to read its trait.)"
-    : "TEAM 1 vs a mixed warband (2 Raiders · Marauder · Brute · Disruptor). Read the foes: the Brute can't be pinned, the Marauder hits from range, the Disruptor strips buffs. (Hover an enemy's name to read its trait.)", "l-round");
+  log(introLine(team), "l-round");
   render();
+}
+function startExpedition(team){                             // a 3-fight run; wounds carry between fights
+  team = team || (S && S.team) || 1;
+  S = baseState(team,"expedition");
+  document.getElementById("log").innerHTML = "";
+  log(`EXPEDITION — Fight 1 of ${S.expTotal}. Wounds carry between fights; survive all ${S.expTotal} to win.`,"l-round");
+  log(introLine(team), "l-round");
+  render();
+}
+function nextFight(){                                        // interlude → next battle, carrying the survivors
+  const p = party();
+  p.forEach(u=>{
+    if(!alive(u)){ u.hp=Math.ceil(u.max*0.4); u.st.down=false; }  // the fallen are dragged on, battered
+    else u.hp=Math.min(u.max, u.hp + Math.ceil(u.max*0.3));       // catch your breath
+    u.strain=0; u.st={}; u.barrier=0; u.stance=false; u.well=false; u.acted=false; u.moved=false; u.sigDone=false;
+  });
+  S.expFight++;
+  S.round=1; S.doom=8; S.phase="party"; S.pending=null; S.over=null; S.push=false;
+  S.fire=[0,0,0]; S.grown=[0,0,0]; S.glass=[0,0,0]; S.well=-1;
+  S.units = p.concat(foes(S.expFight));
+  log(`— Fight ${S.expFight} of ${S.expTotal} — a fresh warband closes in. —`,"l-round");
+  promptParty();
 }
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
@@ -657,10 +693,23 @@ function endOfRound(){
 }
 
 function finish(result,why){
+  if(result==="win" && S.mode==="expedition" && S.expFight < S.expTotal){
+    S.over="interlude";
+    log(`★ Fight ${S.expFight} of ${S.expTotal} cleared — regroup.`,"l-hit");
+    render(); return;
+  }
   S.over=result;
-  if(result==="win") log(`★ VICTORY — the Raiders are down, doom at ${S.doom}.`,"l-hit");
-  else log(`☠ DEFEAT — ${why}`,"l-bad");
+  if(result==="win") log(S.mode==="expedition"
+      ? `★ EXPEDITION COMPLETE — all ${S.expTotal} fights survived!`
+      : `★ VICTORY — the warband is down, doom at ${S.doom}.`,"l-hit");
+  else log(`☠ ${S.mode==="expedition" ? `EXPEDITION FAILED — the squad fell on fight ${S.expFight}` : "DEFEAT"}${why?" — "+why:""}`,"l-bad");
   render();
+}
+function startButtons(){
+  const other=S.team===1?2:1;
+  return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
+    +`<button onclick="startExpedition(S.team)">⚔ Expedition (Team ${S.team})</button>`
+    +`<button onclick="newGame(${other})">Switch to Team ${other}</button>`;
 }
 
 /* ─── render ──────────────────────────────────────────────────────────────── */
@@ -712,6 +761,8 @@ function render(){
   document.getElementById("doom").textContent=S.doom;
   document.getElementById("round").textContent=S.round;
   document.getElementById("teamlabel").textContent=S.team;
+  const fb=document.getElementById("fightbox");
+  if(fb){ if(S.mode==="expedition"){ fb.style.display=""; document.getElementById("fightlabel").textContent=`${S.expFight}/${S.expTotal}`; } else fb.style.display="none"; }
   document.getElementById("doompips").textContent="◆".repeat(Math.max(0,S.doom));
   document.getElementById("party").innerHTML  = party().map(unitCard).join("");
   document.getElementById("enemies").innerHTML= enemies().map(unitCard).join("");
@@ -722,9 +773,16 @@ function render(){
   acts.innerHTML=""; hint.textContent="";
 
   if(S.over){
-    head.innerHTML=`<span class="win ${S.over==="win"?"w":"l"}">${S.over==="win"?"Victory":"Defeat"}</span>`;
-    acts.innerHTML=`<button class="primary" onclick="newGame(S.team)">New fight</button>`
-      +`<button onclick="newGame(S.team===1?2:1)">Try Team ${S.team===1?2:1}</button>`;
+    if(S.over==="interlude"){
+      head.innerHTML=`<span class="win w">Fight ${S.expFight} / ${S.expTotal} cleared</span>`;
+      hint.textContent="The squad catches its breath — survivors heal a little, the fallen are dragged on battered. Wounds carry forward.";
+      acts.innerHTML=`<button class="primary" onclick="nextFight()">Press on to Fight ${S.expFight+1} ▶</button>`;
+      return;
+    }
+    const won=S.over==="win";
+    const label = won ? (S.mode==="expedition"?"Expedition Complete ★":"Victory") : (S.mode==="expedition"?"Expedition Failed":"Defeat");
+    head.innerHTML=`<span class="win ${won?"w":"l"}">${label}</span>`;
+    acts.innerHTML=startButtons();
     return;
   }
   if(S.phase!=="party"){ head.textContent="Raiders are acting…"; return; }
