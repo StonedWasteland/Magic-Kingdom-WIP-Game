@@ -111,13 +111,7 @@ const roll2 = () => { const a=1+Math.floor(Math.random()*6),
 const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 
 let S;
-function raiders(){ return [
-  { id:"r1", name:"Raider A", role:"melee", side:"enemy", hp:16,max:16, band:1, st:{}, acted:false },
-  { id:"r2", name:"Raider B", role:"melee", side:"enemy", hp:16,max:16, band:1, st:{}, acted:false },
-  { id:"mar", name:"Marauder", role:"ranged", side:"enemy", hp:12,max:12, band:2, st:{}, acted:false },
-  { id:"bru", name:"Brute", role:"brute", side:"enemy", hp:24,max:24, band:2, st:{}, acted:false, ctrlImmune:true },
-  { id:"dis", name:"Disruptor", role:"disruptor", side:"enemy", hp:14,max:14, band:1, st:{}, acted:false },
-]; }
+function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
   { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false, stance:false },
   { id:"mason", name:"Mason", role:"Cement", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
@@ -133,16 +127,28 @@ function team2(){ return [
   { id:"brand", name:"Brand", role:"Smith", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
 function freshParty(team){ return team===2?team2():team1(); }
-function foes(fight){                                       // warband, escalating per expedition fight
-  const list = raiders();                                  // base: 2 Raiders + Marauder + Brute + Disruptor
-  if(fight===2){                                           // more bodies + more ranged pressure
-    list.push({ id:"r6",   name:"Raider F",    role:"melee",  side:"enemy", hp:16,max:16, band:2, st:{}, acted:false });
-    list.push({ id:"mar2", name:"Marauder II", role:"ranged", side:"enemy", hp:12,max:12, band:2, st:{}, acted:false });
-  }
-  if(fight>=3){                                            // the climax — a boss
-    list.push({ id:"warlord", name:"Warlord", role:"brute", side:"enemy", hp:40,max:40, band:2, st:{}, acted:false, ctrlImmune:true, boss:true });
-  }
-  return list;
+function foes(fight){                                       // a varied warband per expedition fight
+  if(fight>=3) return [                                    // climax — boss + buffer + caster + grunts
+    mk("warlord","Warlord","brute",40,2,{ctrlImmune:true,boss:true}),
+    mk("alpha","Pack Alpha","alpha",20,1),
+    mk("cul","Cultist","caster",13,2),
+    mk("r1","Raider A","melee",16,1),
+    mk("r2","Raider B","melee",16,1),
+  ];
+  if(fight===2) return [                                   // control + sustain — priority targets everywhere
+    mk("r1","Raider A","melee",16,1), mk("r2","Raider B","melee",16,1),
+    mk("bru","Brute","brute",24,2,{ctrlImmune:true}),
+    mk("bin","Frostbinder","binder",13,2),
+    mk("men","Mender","mender",14,2),
+    mk("mar","Marauder","ranged",12,2),
+  ];
+  return [                                                 // fight 1 / single skirmish — the sampler
+    mk("r1","Raider A","melee",16,1), mk("r2","Raider B","melee",16,1),
+    mk("mar","Marauder","ranged",12,2),
+    mk("bru","Brute","brute",24,2,{ctrlImmune:true}),
+    mk("dis","Disruptor","disruptor",14,1),
+    mk("cul","Cultist","caster",13,2),
+  ];
 }
 function introLine(team){
   return team===2
@@ -561,6 +567,10 @@ function enemyTurn(){
     if(e.st.suppressed){ e.st.suppressed--; log(`${e.name} is entombed (Suppressed) — can't act.`,"l-root"); return; }
     if(e.role==="ranged"){ enemyAttack(e); return; }     // Marauder: fires from any range, never needs to close
     if(e.role==="disruptor"){ disrupt(e); return; }       // Disruptor: strips a buff instead of attacking
+    if(e.role==="caster"){ castFire(e); return; }         // Cultist: ranged fire + Burning
+    if(e.role==="binder"){ castFrost(e); return; }        // Frostbinder: ranged Slow
+    if(e.role==="mender"){ mend(e); return; }             // Mender: heals an ally
+    if(e.role==="alpha"){ rally(e); return; }             // Pack Alpha: shields + heals an ally
     if(e.st.rooted || e.st.entangled || e.st.heavy){    // pinned: can't advance, only attacks if already Engaged
       const why = e.st.rooted?"Rooted":e.st.entangled?"Entangled":"Heavy";
       if(e.band===0) enemyAttack(e);
@@ -603,6 +613,28 @@ function enemyAttack(e){
     if(!tgt.stance) setSt(tgt,"stagger",1);            // metal can't be Staggered
     log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored, unshaken)":" and is Staggered"}.`,"l-bad"); }
   if((t==="full"||t==="partial") && tgt.st.thorns && e.role!=="ranged"){ damage(e,2,"thorns"); log(`  ${e.name} is torn on ${tgt.name}'s thorns: 2.`,"l-part"); }
+}
+function pickParty(){ const t=liveParty(); return t.length?t[Math.floor(Math.random()*t.length)]:null; }
+function castFire(e){                                  // Cultist: ranged fire — sets a hero Burning
+  const t=pickParty(); if(!t) return;
+  damage(t,2,"searing flame"); setSt(t,"burning",2);
+  log(`${e.name} hurls flame at ${t.name}: 2 + Burning.`,"l-fire");
+}
+function castFrost(e){                                 // Frostbinder: ranged control — Slows a hero
+  const t=pickParty(); if(!t) return;
+  damage(t,1,"frost"); setSt(t,"slowed",2);
+  log(`${e.name} rimes ${t.name} with frost: 1 + Slowed.`,"l-part");
+}
+function mend(e){                                      // Mender: heals its most-wounded ally (kill it first!)
+  const hurt=liveEnemies().filter(x=>x!==e && x.hp<x.max).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];
+  if(hurt){ const b=hurt.hp; hurt.hp=Math.min(hurt.max,hurt.hp+5); log(`${e.name} mends ${hurt.name}: +${hurt.hp-b}.`,"l-hit"); }
+  else { const t=pickParty(); if(t){ damage(t,2,"a hex"); log(`${e.name} hexes ${t.name}: 2.`,"l-part"); } }
+}
+function rally(e){                                     // Pack Alpha: shields + heals its most-wounded ally
+  const t=liveEnemies().filter(x=>x!==e).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];
+  if(t){ t.barrier=(t.barrier||0)+4; const b=t.hp; t.hp=Math.min(t.max,t.hp+3);
+    log(`${e.name} rallies ${t.name} — Barrier 4${t.hp>b?` + heal ${t.hp-b}`:""}.`,"l-bad"); }
+  else { const tg=pickParty(); if(tg){ damage(tg,2,"a savage howl"); log(`${e.name} howls at ${tg.name}: 2.`,"l-part"); } }
 }
 function disrupt(e){                                   // Disruptor: strip a buff instead of attacking
   const buffed=liveParty().filter(u=>(u.barrier||0)>0||u.stance||u.well||u.st.taunting||u.st.regen);
@@ -946,6 +978,10 @@ function enemyTip(role){
   return role==="ranged" ? "Marauder — fires from any range; ignores taunts and the gravity well (shoots past your front line). Squishy: focus it down."
     : role==="brute" ? "Brute — IMMUNE to pulls, knockback, and pinning (Root/Heavy/Entangle/Slow). The gather-and-hold combo fails on it; out-damage it (Shred still works)."
     : role==="disruptor" ? "Disruptor — each turn it strips a buff (Barrier / stance / well / Taunt / Regen) instead of attacking."
+    : role==="caster" ? "Cultist — a ranged fire-caster; sets your heroes Burning from afar. Squishy: kill it or cleanse the burn."
+    : role==="binder" ? "Frostbinder — ranged control; Slows your heroes from a distance. Squishy: focus it."
+    : role==="mender" ? "Mender — heals its most-wounded ally every turn. Kill it first, or the fight drags forever."
+    : role==="alpha" ? "Pack Alpha — rallies the warband (shields + heals its most-wounded ally) each turn. Priority kill."
     : "Raider — basic melee; advances to Engaged, then attacks.";
 }
 
