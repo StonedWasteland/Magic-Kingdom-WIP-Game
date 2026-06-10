@@ -81,7 +81,7 @@
   <div class="doom">TEAM <b id="teamlabel" style="color:var(--ink)">1</b></div>
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="startExpedition(S.team)" style="margin-left:auto" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===2?1:2)" title="Restart a single skirmish with the other squad">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:1))" title="Cycle to the next squad (1 → 2 → 3)">Switch squad ⇄</button>
 </div>
 
 <div class="cols">
@@ -126,7 +126,14 @@ function team2(){ return [
   { id:"sol", name:"Sol", role:"Radiance", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"brand", name:"Brand", role:"Smith", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
-function freshParty(team){ return team===2?team2():team1(); }
+function team3(){ return [
+  { id:"gloop", name:"Gloop", role:"Goo",   side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"puck",  name:"Puck",  role:"Trick", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"kai",   name:"Kai",   role:"Chi",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"hazey", name:"Hazey", role:"Ganja", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"hops",  name:"Hops",  role:"Drunk", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
+function freshParty(team){ return team===3?team3():team===2?team2():team1(); }
 function foes(fight){                                       // a varied warband per expedition fight
   if(fight>=3) return [                                    // climax — boss + buffer + caster + grunts
     mk("warlord","Warlord","brute",40,2,{ctrlImmune:true,boss:true}),
@@ -151,9 +158,8 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  return team===2
-    ? "TEAM 2 vs a mixed warband (Raiders · Marauder · Brute · Disruptor). Gather → hold → reap — but the Brute ignores control, the Marauder shoots your back line, the Disruptor strips buffs. (Hover an enemy's name for its trait.)"
-    : "TEAM 1 vs a mixed warband (Raiders · Marauder · Brute · Disruptor). Read the foes: the Brute can't be pinned, the Marauder hits from range, the Disruptor strips buffs. (Hover an enemy's name for its trait.)";
+  const t = team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
   return { team:team, mode:mode, expFight:1, expTotal: mode==="expedition"?3:1,
@@ -205,6 +211,7 @@ function log(msg,cls){ const d=document.createElement("div");
   const L=document.getElementById("log"); L.appendChild(d); L.scrollTop=L.scrollHeight; }
 
 function damage(u,n,how){
+  u._hit=true;                                     // took damage this round (Gloop's regen is suppressed when hit)
   n += (u.st.shred||0);                            // Shred amplifier: take more from every source
   if((u.barrier||0)>0){                            // Barrier shields soak before HP
     const soak=Math.min(u.barrier,n); u.barrier-=soak; n-=soak;
@@ -507,6 +514,122 @@ function sigPanoply(actor){              // Blacksmith: a storm of conjured blad
   finishAction(actor);
 }
 
+/* ─── Team 3 actions ──────────────────────────────────────────────────────── */
+function engulf(actor){                  // Goo: regenerate + taunt (suppressed any round it's hit)
+  spend(actor,1);
+  setSt(actor,"regen",3); setSt(actor,"taunting",2);
+  log(`${actor.name} swells into a wall of goo — Regenerating + Taunting. (No regen on a round it gets hit.)`,"l-root");
+  finishAction(actor);
+}
+function gooLash(actor,target){          // Goo offense: sticky melee — damage + Slow
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s goo splatters past ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,3,"Goo"); log(`  ${target.name} takes 3.`,"l-part"); }
+  else { damage(target,4,"Goo"); setSt(target,"slowed",2); log(`  ${target.name} takes 4 + Slowed (stuck in goo).`,"l-root"); }
+  finishAction(actor);
+}
+function sigGooSplash(actor){            // Goo signature: splash Engaged + Near
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} erupts in a GIANT GOO SPLASH across Engaged & Near!`,"l-root");
+  liveEnemies().filter(e=>e.band<=1).forEach(e=>{ damage(e,5,"Goo Splash"); setSt(e,"slowed",2); log(`  ${e.name} takes 5 + Slowed.`,"l-part"); });
+  finishAction(actor);
+}
+function prank(actor,target){            // Trickster: the gag decides the effect
+  const g=(S.pending&&S.pending.gag)||"Banana"; S.pending=null;
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} sidesteps the ${g}.`,"l-miss"); finishAction(actor); return; }
+  if(g==="Banana"){ damage(target,2,"a pratfall"); setSt(target,"slowed",2); setSt(target,"stagger",1); log(`  ${target.name} slips on a banana peel — Slowed + Staggered!`,"l-root"); }
+  else if(g==="Pie"){ setSt(target,"blinded",2); log(`  ${target.name} takes a pie to the face — Blinded!`,"l-root"); }
+  else { setSt(target,"rooted",2); log(`  ${target.name}'s laces are tied together — Rooted!`,"l-root"); }
+  finishAction(actor);
+}
+function marbles(actor,band){            // Trickster: scatter a band — Slow everyone there
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>setSt(e,"slowed",2));
+  log(`${actor.name} scatters marbles across ${BANDS[band]} — ${hit.length?"everyone there is Slowed":"but no one's there"}.`,"l-part");
+  finishAction(actor);
+}
+function sigWholeBag(actor){             // Trickster signature: a random prank on every enemy
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} dumps THE WHOLE BAG on the warband:`,"l-root");
+  const gags=["slowed","blinded","stagger","rooted"];
+  liveEnemies().forEach(e=>{ const g=gags[Math.floor(Math.random()*gags.length)]; setSt(e,g,2); log(`  ${e.name}: ${g}!`,"l-part"); });
+  finishAction(actor);
+}
+function chiBarrage(actor,band){         // Chi: light damage to every enemy in a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  if(!hit.length){ log(`${actor.name}'s barrage finds no one at ${BANDS[band]}.`,"l-miss"); finishAction(actor); return; }
+  log(`${actor.name} sprays chi across ${BANDS[band]}:`,"l-part");
+  hit.forEach(e=>{ damage(e,2,"Chi"); log(`  ${e.name} takes 2.`,"l-part"); });
+  finishAction(actor);
+}
+function chiBolt(actor,target){          // Chi: a single quick bolt, any range
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s bolt fizzles past ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,3,"Chi"); log(`  ${target.name} takes 3.`,"l-part"); }
+  else { damage(target,4,"Chi"); log(`  ${target.name} takes 4 Chi.`,"l-hit"); }
+  finishAction(actor);
+}
+function sigChiNova(actor){              // Chi signature: blast all three bands
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} gathers everything into a SPIRIT BOMB — every zone erupts!`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,4,"Chi Nova"); log(`  ${e.name} takes 4.`,"l-part"); });
+  finishAction(actor);
+}
+function strain(actor,target){           // Ganja: the strain decides the effect
+  const s=(S.pending&&S.pending.strain)||"Indica"; S.pending=null;
+  spend(actor,1);
+  if(s==="Indica"){ setSt(target,"regen",3); log(`${actor.name} passes ${target.name} some Indica — Regenerating.`,"l-hit"); }
+  else if(s==="Sativa"){ target.barrier=(target.barrier||0)+4; target.dodge=(target.dodge||0)+1; log(`${actor.name} passes ${target.name} some Sativa — Barrier + a Dodge (too chill to get hit).`,"l-hit"); }
+  else { const bad=["burning","bleeding","slowed","rooted","entangled","heavy","blinded","stagger","shred"]; let c=null;
+    for(const k of bad){ if(target.st[k]){ c=k; target.st[k]=0; break; } }
+    log(c?`${actor.name}'s Purple Haze melts ${c} off ${target.name}.`:`${actor.name} finds nothing to mellow on ${target.name}.`, c?"l-hit":"l-miss"); }
+  finishAction(actor);
+}
+function smokeCloud(actor){              // Ganja: a mellow group puff
+  spend(actor,2);
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+2); });
+  log(`${actor.name} fills the air with a mellow haze — the whole squad eases (heal 2).`,"l-hit");
+  finishAction(actor);
+}
+function sigPassBowl(actor){             // Ganja signature: random debuff all foes, random buff all allies
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} sparks a GIANT BOWL — the whole field gets weird:`,"l-hit");
+  const deb=["slowed","blinded","burning","bleeding"];
+  liveEnemies().forEach(e=>{ const d=deb[Math.floor(Math.random()*deb.length)]; setSt(e,d,2); log(`  ${e.name}: ${d}.`,"l-part"); });
+  party().filter(alive).forEach(u=>{ const r=Math.random();
+    if(r<0.34){ setSt(u,"regen",3); log(`  ${u.name}: Regenerating.`,"l-hit"); }
+    else if(r<0.67){ u.barrier=(u.barrier||0)+4; log(`  ${u.name}: Barrier.`,"l-hit"); }
+    else { u.dodge=(u.dodge||0)+1; log(`  ${u.name}: a Dodge.`,"l-hit"); } });
+  finishAction(actor);
+}
+function drunkenBlows(actor,target){     // Drunk: punch + Blind + a chance at a Dodge
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} swings wide and nearly topples.`,"l-miss"); finishAction(actor); return; }
+  damage(target, t==="full"?4:3, "drunken fists"); setSt(target,"blinded",1);
+  const got = Math.random()<0.5; if(got) actor.dodge=(actor.dodge||0)+1;
+  log(`  ${target.name} takes ${t==="full"?4:3} + Blinded (booze in the eyes)${got?`; ${actor.name} weaves — +1 Dodge`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function drink(actor){                    // Drunk: spend the turn, gain 2 Dodge
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+2;
+  log(`${actor.name} takes a long pull — +2 Dodge (the next 2 hits miss). Hic.`,"l-hit");
+  finishAction(actor);
+}
+function sigDrunkenRage(actor,target){    // Drunk signature: lock both in place, pummel one
+  spend(actor,4); actor.sigDone=true;
+  setSt(actor,"rooted",2); setSt(target,"rooted",2); setSt(target,"suppressed",2); damage(target,8,"a DRUNKEN RAGE");
+  log(`${actor.name} flies into a DRUNKEN RAGE at ${target.name} — both locked in place; ${target.name} takes 8 and can't act!`,"l-bad");
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -606,6 +729,7 @@ function enemyAttack(e){
       t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
   const soak = d => tgt.stance ? Math.max(1,d-2) : d;  // Armored: living metal sheds 2 off each hit
   const big = e.boss ? 3 : (e.role==="brute" ? 2 : 0); // Brutes hit hard; the boss harder
+  if(t!=="fail" && (tgt.dodge||0)>0){ tgt.dodge--; log(`  ${tgt.name} drunkenly slips it — Dodge (${tgt.dodge} left).`,"l-miss"); return; }
   if(t==="fail"){ log(`  ${tgt.name} ${e.role==="ranged"?"ducks the shot":"slips the blow"}.`,"l-miss"); }
   else if(t==="partial"){ const d=soak(3+big); damage(tgt,d,"a glancing hit");
     log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored)":""}.`,"l-part"); }
@@ -663,7 +787,9 @@ function endOfRound(){
     if(u.st.regen){
       // Cauterized: fire (a Burning tag, or standing in an On-Fire band) sears wounds shut → no heal
       const cauterized = u.st.burning>0 || (S.fire[u.band]>0 && u.affinity!=="fire");
+      const gooHit = u.role==="Goo" && u._hit;       // Gloop's goo can't re-form on a round it was hit
       if(cauterized){ log(`  ${u.name}'s wounds are Cauterized by fire — Regenerating suppressed.`,"l-fire"); }
+      else if(gooHit){ log(`  ${u.name}'s goo is too battered to re-form this round (it was hit).`,"l-fire"); }
       else { const b=u.hp; u.hp=Math.min(u.max,u.hp+3);
         if(u.hp>b) log(`  ${u.name} regenerates ${u.hp-b}.`,"l-hit"); }
     }
@@ -715,6 +841,7 @@ function endOfRound(){
   S.fire=S.fire.map(n=>Math.max(0,n-1));
   S.glass=S.glass.map(n=>Math.max(0,n-1));
   S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
+  S.units.forEach(u=>{ u._hit=false; });                                        // reset per-round "was hit" (Gloop regen)
   S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });
 
@@ -744,10 +871,10 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const other=S.team===1?2:1;
+  const next=S.team===1?2:(S.team===2?3:1);
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (Team ${S.team})</button>`
-    +`<button onclick="newGame(${other})">Switch to Team ${other}</button>`;
+    +`<button onclick="newGame(${next})">Switch to Team ${next}</button>`;
 }
 
 /* ─── render ──────────────────────────────────────────────────────────────── */
@@ -777,6 +904,7 @@ function unitCard(u){
     if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
     if(u.st.thorns)  chips.push(chip("regen",`❧ Thorns ${u.st.thorns}`,"Thorns — anyone who hits this unit takes 2 damage back."));
     if((u.barrier||0)>0) chips.push(chip("armor",`◇ Barrier ${u.barrier}`,`Barrier — absorbs the next ${u.barrier} damage before HP is touched.`));
+    if((u.dodge||0)>0) chips.push(chip("stoked",`🍺 Dodge ${u.dodge}`,`Dodge — the next ${u.dodge} attack(s) against this unit automatically miss.`));
     if(S.fire[u.band]>0) chips.push(u.affinity==="fire"
       ? chip("stoked","🔥 Stoked +1","Standing in fire — immune to it, and +1 to fire attacks (fire affinity).")
       : chip("fire","🔥 in fire","Standing in an On-Fire band — 3 fire damage at end of round."));
@@ -831,9 +959,11 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"){
-      hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every Raider there):"
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"){
+      hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
+        : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
+        : pt==="barrage" ? "Choose a band to spray with chi (hits every enemy there):"
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -841,22 +971,36 @@ function render(){
       hint.textContent="Forge a weapon to strike with:";
       acts.innerHTML=["Flameblade","Maul","Chain","Glaive"].map(w=>`<button onclick="pickWeapon('${w}')">${w}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
+    } else if(pt==="prank" && S.pending.gagPick){
+      hint.textContent="Pick a gag:";
+      acts.innerHTML=["Banana","Pie","Laces"].map(g=>`<button onclick="pickGag('${g}')">${g}</button>`).join("")
+        +`<button class="ghost" onclick="cancel()">cancel</button>`;
+    } else if(pt==="strain" && S.pending.strainPick){
+      hint.textContent="Pick a strain:";
+      acts.innerHTML=["Indica","Sativa","Purple Haze"].map(s=>`<button onclick="pickStrain('${s}')">${s}</button>`).join("")
+        +`<button class="ghost" onclick="cancel()">cancel</button>`;
     } else {
-      hint.textContent= pt==="slam" ? "Click a Raider at Engaged or Near to Slam."
-        : pt==="sledge" ? "Click a Raider at Engaged or Near to Sledge."
-        : pt==="rend" ? "Click a Raider at Engaged or Near to Rend."
-        : pt==="haymaker" ? "Click a Raider at Engaged or Near to Haymaker (knocks it back a band)."
-        : pt==="hurl" ? "Click any Raider to Hurl debris at."
+      hint.textContent= pt==="slam" ? "Click an enemy at Engaged or Near to Slam."
+        : pt==="sledge" ? "Click an enemy at Engaged or Near to Sledge."
+        : pt==="rend" ? "Click an enemy at Engaged or Near to Rend."
+        : pt==="haymaker" ? "Click an enemy at Engaged or Near to Haymaker (knocks it back a band)."
+        : pt==="hurl" ? "Click any enemy to Hurl debris at."
         : pt==="graft" ? "Click an ally to heal — or a Downed ally to revive."
-        : pt==="crush" ? "Click any Raider to Crush (gravity reaches every band)."
-        : pt==="strangle" ? "Click any Raider to Strangle with vines."
-        : pt==="lance" ? "Click any Raider to lance with light."
+        : pt==="crush" ? "Click any enemy to Crush (gravity reaches every band)."
+        : pt==="strangle" ? "Click any enemy to Strangle with vines."
+        : pt==="lance" ? "Click any enemy to lance with light."
         : pt==="aegis" ? "Click an ally to shield with a Barrier."
         : pt==="cleanse" ? "Click an ally to Unmake — purge ALL their tags (buffs & debuffs), heal 2 per tag."
-        : pt==="summon" ? `Click a Raider at Engaged or Near to strike with the ${S.pending.weapon}.`
-        : pt==="mausoleum" ? "Click any Raider to entomb in cement (hard lock — can't act)."
-        : pt==="wreck" ? "Click any Raider to bury under a Wrecking Throw (10 Crushing)."
-        : "Click any Raider to Firebolt.";
+        : pt==="summon" ? `Click an enemy at Engaged or Near to strike with the ${S.pending.weapon}.`
+        : pt==="mausoleum" ? "Click any enemy to entomb in cement (hard lock — can't act)."
+        : pt==="wreck" ? "Click any enemy to bury under a Wrecking Throw."
+        : pt==="goolash" ? "Click an enemy at Engaged or Near to Goo Lash (slows it)."
+        : pt==="chibolt" ? "Click any enemy to bolt with chi."
+        : pt==="prank" ? `Click any enemy to hit with the ${S.pending.gag}.`
+        : pt==="strain" ? `Click an ally to pass the ${S.pending.strain}.`
+        : pt==="blows" ? "Click an enemy at Engaged or Near to pummel."
+        : pt==="rage" ? "Click any enemy for a DRUNKEN RAGE (locks you both in place)."
+        : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
     return;
@@ -906,6 +1050,26 @@ function render(){
     b.push(btn("Summon Arms","arm('summon')",false,TIPS.summon));
     b.push(btn("Bulwark (shield)",`bulwarkArms(U('${a.id}'))`,false,TIPS.bulwark));
     b.push(btn("★ Panoply",`sigPanoply(U('${a.id}'))`, a.sigDone, TIPS.panoply));
+  } else if(a.role==="Goo"){
+    b.push(btn("Engulf (goo up)",`engulf(U('${a.id}'))`,false,TIPS.engulf));
+    b.push(btn("Goo Lash","arm('goolash')",false,TIPS.goolash));
+    b.push(btn("★ Goo Splash",`sigGooSplash(U('${a.id}'))`, a.sigDone, TIPS.gooSplash));
+  } else if(a.role==="Trick"){
+    b.push(btn("Prank","arm('prank')",false,TIPS.prank));
+    b.push(btn("Marbles (zone)","arm('marbles')",false,TIPS.marbles));
+    b.push(btn("★ The Whole Bag",`sigWholeBag(U('${a.id}'))`, a.sigDone, TIPS.wholeBag));
+  } else if(a.role==="Chi"){
+    b.push(btn("Chi Barrage","arm('barrage')",false,TIPS.barrage));
+    b.push(btn("Chi Bolt","arm('chibolt')",false,TIPS.chibolt));
+    b.push(btn("★ Spirit Bomb",`sigChiNova(U('${a.id}'))`, a.sigDone, TIPS.chiNova));
+  } else if(a.role==="Ganja"){
+    b.push(btn("Pass the Strain","arm('strain')",false,TIPS.strain));
+    b.push(btn("Smoke Cloud",`smokeCloud(U('${a.id}'))`,false,TIPS.smokeCloud));
+    b.push(btn("★ Pass the Bowl",`sigPassBowl(U('${a.id}'))`, a.sigDone, TIPS.passBowl));
+  } else if(a.role==="Drunk"){
+    b.push(btn("Drunken Blows","arm('blows')",false,TIPS.blows));
+    b.push(btn("Drink (+2 Dodge)",`drink(U('${a.id}'))`,false,TIPS.drink));
+    b.push(btn("★ Drunken Rage","arm('rage')", a.sigDone, TIPS.rage));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -928,7 +1092,17 @@ function render(){
     ? "Support: Aegis shields an ally (Barrier soaks before HP), Unmake purges ALL an ally's tags and heals 2 per tag (clears debuffs — but their buffs too), Radiant Lance burns + Blinds."
     : a.role==="Smith"
     ? "Striker: Summon Arms — forge the weapon for the moment (Flameblade/Maul/Chain/Glaive). Bulwark forges a shield for yourself."
-    : "Tip: gather the Raiders into one band, hold them there, and reap them.";
+    : a.role==="Goo"
+    ? "Goo tank: Engulf to regen + taunt — but keep the enemy busy elsewhere, since it can't regen on a round it's hit. Goo Splash hits two bands."
+    : a.role==="Trick"
+    ? "Trickster: Prank a foe (banana = slow+stagger, pie = blind, laces = root). Marbles slows a whole band. Pure control."
+    : a.role==="Chi"
+    ? "Chi: Barrage a band for spread damage, Bolt a single foe. Squishy — stay at the back. Spirit Bomb nukes all three bands."
+    : a.role==="Ganja"
+    ? "Ganja: Pass the Strain to an ally (Indica = heal, Sativa = shield+dodge, Purple Haze = cleanse). Smoke Cloud heals the squad."
+    : a.role==="Drunk"
+    ? "Drunk: Drink for +2 Dodge (guaranteed misses), Drunken Blows to punch + blind (chance at a Dodge). Drunken Rage locks a foe down."
+    : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
 const TIPS = {
@@ -967,6 +1141,22 @@ const TIPS = {
   glasstormSig:"★ Glasstorm (once/expedition) — a field-wide storm that Shreds and Slows every enemy.",
   dayspring:"★ Dayspring (once/expedition) — shield and heal the whole squad; sear and Blind every enemy.",
   panoply:"★ Panoply (once/expedition) — a storm of conjured blades hits every enemy.",
+  // Team 3
+  engulf:"Engulf — swell into goo: regenerate each round + taunt enemies onto you. (No regen on a round you get hit.)",
+  goolash:"Goo Lash — sticky melee that Slows the enemy.",
+  gooSplash:"★ Goo Splash (once/expedition) — splash every enemy in the Engaged & Near bands + Slow.",
+  prank:"Prank — conjure a gag: Banana (slow + stagger), Pie (blind), or Laces (root).",
+  marbles:"Marbles — scatter a band; every enemy there is Slowed.",
+  wholeBag:"★ The Whole Bag (once/expedition) — a random prank (slow / blind / stagger / root) on every enemy.",
+  barrage:"Chi Barrage — spray a whole band, light damage to every enemy in it.",
+  chibolt:"Chi Bolt — a quick single chi bolt at any range.",
+  chiNova:"★ Spirit Bomb (once/expedition) — a massive blast that hits every enemy in all three bands.",
+  strain:"Pass the Strain — pick a strain: Indica (heal-over-time), Sativa (shield + dodge), Purple Haze (cleanse a debuff).",
+  smokeCloud:"Smoke Cloud — a mellow haze; the whole squad heals a little.",
+  passBowl:"★ Pass the Bowl (once/expedition) — random debuff on every enemy, random buff on every ally.",
+  blows:"Drunken Blows — punch + Blind the enemy; a chance to gain a Dodge.",
+  drink:"Drink — take a swig: +2 Dodge (the next 2 hits against you miss). Costs your turn.",
+  rage:"★ Drunken Rage (once/expedition) — lock yourself and one enemy in place and pummel it (it can't act).",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -1006,6 +1196,14 @@ function arm(kind){
   if(kind==="summon")   S.pending={type:"summon",actor:a.id,weaponPick:true};
   if(kind==="mausoleum")S.pending={type:"mausoleum",actor:a.id,targets:"enemy"};
   if(kind==="wreck")    S.pending={type:"wreck",actor:a.id,targets:"enemy"};
+  if(kind==="goolash")  S.pending={type:"goolash",actor:a.id,targets:"enemy"};
+  if(kind==="prank")    S.pending={type:"prank",actor:a.id,gagPick:true};
+  if(kind==="marbles")  S.pending={type:"marbles",actor:a.id};
+  if(kind==="barrage")  S.pending={type:"barrage",actor:a.id};
+  if(kind==="chibolt")  S.pending={type:"chibolt",actor:a.id,targets:"enemy"};
+  if(kind==="strain")   S.pending={type:"strain",actor:a.id,strainPick:true};
+  if(kind==="blows")    S.pending={type:"blows",actor:a.id,targets:"enemy"};
+  if(kind==="rage")     S.pending={type:"rage",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -1014,8 +1212,12 @@ function pickBand(i){
   if(t==="scorch") scorch(a,i);
   else if(t==="gale") flensingGale(a,i);
   else if(t==="glasszone") glassZone(a,i);
+  else if(t==="marbles") marbles(a,i);
+  else if(t==="barrage") chiBarrage(a,i);
 }
 function pickWeapon(w){ if(!S.pending) return; S.pending.weapon=w; S.pending.weaponPick=false; S.pending.targets="enemy"; render(); }
+function pickGag(g){ if(!S.pending) return; S.pending.gag=g; S.pending.gagPick=false; S.pending.targets="enemy"; render(); }
+function pickStrain(s){ if(!S.pending) return; S.pending.strain=s; S.pending.strainPick=false; S.pending.targets="ally"; render(); }
 function zoneMark(i){ let m=""; if(S.fire[i]>0)m+="🔥"; if(S.grown[i]>0)m+="🌿"; if(S.glass[i]>0)m+="◈"; if(S.well===i)m+="🌀"; return m?(" "+m):""; }
 function togglePush(){ if(!S.over && S.phase==="party"){ S.push=!S.push; render(); } }
 function passTurn(){ const a=activeActor(); if(a){ log(`${a.name} holds.`,"l-miss"); finishAction(a); } }
@@ -1032,6 +1234,12 @@ function pick(arg){
   if(type==="lance"){ radiantLance(a,target); return; }
   if(type==="mausoleum"){ sigMausoleum(a,target); return; }
   if(type==="wreck"){ sigWreckingThrow(a,target); return; }
+  if(type==="goolash"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Goo Lash hits Engaged or Near."; return; } gooLash(a,target); return; }
+  if(type==="chibolt"){ chiBolt(a,target); return; }
+  if(type==="prank"){ prank(a,target); return; }
+  if(type==="strain"){ strain(a,target); return; }
+  if(type==="blows"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Drunken Blows hit Engaged or Near."; return; } drunkenBlows(a,target); return; }
+  if(type==="rage"){ sigDrunkenRage(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
