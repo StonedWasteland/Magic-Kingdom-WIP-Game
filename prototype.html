@@ -210,17 +210,20 @@ function log(msg,cls){ const d=document.createElement("div");
   if(cls) d.className=cls; d.textContent=msg;
   const L=document.getElementById("log"); L.appendChild(d); L.scrollTop=L.scrollHeight; }
 
-function damage(u,n,how){
+function damage(u,n,how){                            // returns true if it landed, false if dodged
+  if((u.dodge||0)>0){ u.dodge--;                    // 1 Dodge stack negates this whole instance of damage
+    log(`  ${u.name} dodges the ${how||"hit"}! (Dodge ${u.dodge} left)`,"l-miss"); return false; }
   u._hit=true;                                     // took damage this round (Gloop's regen is suppressed when hit)
   n += (u.st.shred||0);                            // Shred amplifier: take more from every source
   if((u.barrier||0)>0){                            // Barrier shields soak before HP
     const soak=Math.min(u.barrier,n); u.barrier-=soak; n-=soak;
     if(soak>0) log(`  ${u.name}'s Barrier absorbs ${soak}${u.barrier>0?` (${u.barrier} left)`:" — shattered"}.`,"l-miss");
   }
-  if(n<=0) return;
+  if(n<=0) return true;
   u.hp=Math.max(0,u.hp-n);
   if(u.hp===0 && !u.st.down){ u.st.down=true;
     log(`  ✖ ${u.name} is DOWNED (${how}).`, "l-bad"); }
+  return true;
 }
 
 /* ─── the Control check ───────────────────────────────────────────────────── */
@@ -559,26 +562,25 @@ function sigWholeBag(actor){             // Trickster signature: a random prank 
   liveEnemies().forEach(e=>{ const g=gags[Math.floor(Math.random()*gags.length)]; setSt(e,g,2); log(`  ${e.name}: ${g}!`,"l-part"); });
   finishAction(actor);
 }
+function pickEnemy(){ const t=liveEnemies(); return t.length?t[Math.floor(Math.random()*t.length)]:null; }
 function chiBarrage(actor,band){         // Chi: light damage to every enemy in a band
   spend(actor,1);
   const hit=liveEnemies().filter(e=>e.band===band);
   if(!hit.length){ log(`${actor.name}'s barrage finds no one at ${BANDS[band]}.`,"l-miss"); finishAction(actor); return; }
   log(`${actor.name} sprays chi across ${BANDS[band]}:`,"l-part");
-  hit.forEach(e=>{ damage(e,2,"Chi"); log(`  ${e.name} takes 2.`,"l-part"); });
+  hit.forEach(e=>{ damage(e,3,"Chi"); log(`  ${e.name} takes 3.`,"l-part"); });
   finishAction(actor);
 }
-function chiBolt(actor,target){          // Chi: a single quick bolt, any range
-  const p=S.push; S.push=false; spend(actor,p?2:1);
-  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
-  if(t==="fail"){ log(`  ${actor.name}'s bolt fizzles past ${target.name}.`,"l-miss"); }
-  else if(t==="partial"){ damage(target,3,"Chi"); log(`  ${target.name} takes 3.`,"l-part"); }
-  else { damage(target,4,"Chi"); log(`  ${target.name} takes 4 Chi.`,"l-hit"); }
+function chiFlurry(actor){               // Chi: 3 guaranteed strikes at random enemies (can repeat the same one)
+  spend(actor,1);
+  log(`${actor.name} unleashes a flurry of chi — 3 quick strikes:`,"l-part");
+  for(let i=0;i<3;i++){ const e=pickEnemy(); if(e){ damage(e,3,"Chi"); log(`  → ${e.name} takes 3.`,"l-part"); } }
   finishAction(actor);
 }
 function sigChiNova(actor){              // Chi signature: blast all three bands
   spend(actor,4); actor.sigDone=true;
   log(`${actor.name} gathers everything into a SPIRIT BOMB — every zone erupts!`,"l-hit");
-  liveEnemies().forEach(e=>{ damage(e,4,"Chi Nova"); log(`  ${e.name} takes 4.`,"l-part"); });
+  liveEnemies().forEach(e=>{ damage(e,5,"Chi Nova"); log(`  ${e.name} takes 5.`,"l-part"); });
   finishAction(actor);
 }
 function strain(actor,target){           // Ganja: the strain decides the effect
@@ -729,25 +731,25 @@ function enemyAttack(e){
       t==="full"?"l-bad":t==="partial"?"l-part":"l-miss");
   const soak = d => tgt.stance ? Math.max(1,d-2) : d;  // Armored: living metal sheds 2 off each hit
   const big = e.boss ? 3 : (e.role==="brute" ? 2 : 0); // Brutes hit hard; the boss harder
-  if(t!=="fail" && (tgt.dodge||0)>0){ tgt.dodge--; log(`  ${tgt.name} drunkenly slips it — Dodge (${tgt.dodge} left).`,"l-miss"); return; }
-  if(t==="fail"){ log(`  ${tgt.name} ${e.role==="ranged"?"ducks the shot":"slips the blow"}.`,"l-miss"); }
-  else if(t==="partial"){ const d=soak(3+big); damage(tgt,d,"a glancing hit");
-    log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored)":""}.`,"l-part"); }
-  else { const d=soak(4+big); damage(tgt,d,"a solid hit");
-    if(!tgt.stance) setSt(tgt,"stagger",1);            // metal can't be Staggered
-    log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored, unshaken)":" and is Staggered"}.`,"l-bad"); }
-  if((t==="full"||t==="partial") && tgt.st.thorns && e.role!=="ranged"){ damage(e,2,"thorns"); log(`  ${e.name} is torn on ${tgt.name}'s thorns: 2.`,"l-part"); }
+  let landed=true;
+  if(t==="fail"){ landed=false; log(`  ${tgt.name} ${e.role==="ranged"?"ducks the shot":"slips the blow"}.`,"l-miss"); }
+  else if(t==="partial"){ const d=soak(3+big); landed=damage(tgt,d,"a glancing hit");
+    if(landed) log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored)":""}.`,"l-part"); }
+  else { const d=soak(4+big); landed=damage(tgt,d,"a solid hit");
+    if(landed){ if(!tgt.stance) setSt(tgt,"stagger",1);            // metal can't be Staggered
+      log(`  ${tgt.name} takes ${d}${tgt.stance?" (Armored, unshaken)":" and is Staggered"}.`,"l-bad"); } }
+  if(landed && tgt.st.thorns && e.role!=="ranged"){ damage(e,2,"thorns"); log(`  ${e.name} is torn on ${tgt.name}'s thorns: 2.`,"l-part"); }
 }
 function pickParty(){ const t=liveParty(); return t.length?t[Math.floor(Math.random()*t.length)]:null; }
 function castFire(e){                                  // Cultist: ranged fire — sets a hero Burning
   const t=pickParty(); if(!t) return;
-  damage(t,2,"searing flame"); setSt(t,"burning",2);
-  log(`${e.name} hurls flame at ${t.name}: 2 + Burning.`,"l-fire");
+  log(`${e.name} hurls flame at ${t.name}.`,"l-fire");
+  if(damage(t,2,"searing flame")) setSt(t,"burning",2);   // dodged the flame → dodged the Burning
 }
 function castFrost(e){                                 // Frostbinder: ranged control — Slows a hero
   const t=pickParty(); if(!t) return;
-  damage(t,1,"frost"); setSt(t,"slowed",2);
-  log(`${e.name} rimes ${t.name} with frost: 1 + Slowed.`,"l-part");
+  log(`${e.name} rimes ${t.name} with frost.`,"l-part");
+  if(damage(t,1,"frost")) setSt(t,"slowed",2);
 }
 function mend(e){                                      // Mender: heals its most-wounded ally (kill it first!)
   const hurt=liveEnemies().filter(x=>x!==e && x.hp<x.max).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];
@@ -995,7 +997,6 @@ function render(){
         : pt==="mausoleum" ? "Click any enemy to entomb in cement (hard lock — can't act)."
         : pt==="wreck" ? "Click any enemy to bury under a Wrecking Throw."
         : pt==="goolash" ? "Click an enemy at Engaged or Near to Goo Lash (slows it)."
-        : pt==="chibolt" ? "Click any enemy to bolt with chi."
         : pt==="prank" ? `Click any enemy to hit with the ${S.pending.gag}.`
         : pt==="strain" ? `Click an ally to pass the ${S.pending.strain}.`
         : pt==="blows" ? "Click an enemy at Engaged or Near to pummel."
@@ -1060,7 +1061,7 @@ function render(){
     b.push(btn("★ The Whole Bag",`sigWholeBag(U('${a.id}'))`, a.sigDone, TIPS.wholeBag));
   } else if(a.role==="Chi"){
     b.push(btn("Chi Barrage","arm('barrage')",false,TIPS.barrage));
-    b.push(btn("Chi Bolt","arm('chibolt')",false,TIPS.chibolt));
+    b.push(btn("Chi Flurry",`chiFlurry(U('${a.id}'))`,false,TIPS.flurry));
     b.push(btn("★ Spirit Bomb",`sigChiNova(U('${a.id}'))`, a.sigDone, TIPS.chiNova));
   } else if(a.role==="Ganja"){
     b.push(btn("Pass the Strain","arm('strain')",false,TIPS.strain));
@@ -1148,8 +1149,8 @@ const TIPS = {
   prank:"Prank — conjure a gag: Banana (slow + stagger), Pie (blind), or Laces (root).",
   marbles:"Marbles — scatter a band; every enemy there is Slowed.",
   wholeBag:"★ The Whole Bag (once/expedition) — a random prank (slow / blind / stagger / root) on every enemy.",
-  barrage:"Chi Barrage — spray a whole band, light damage to every enemy in it.",
-  chibolt:"Chi Bolt — a quick single chi bolt at any range.",
+  barrage:"Chi Barrage — spray a whole band, damaging every enemy in it.",
+  flurry:"Chi Flurry — three guaranteed quick strikes at random enemies (can hit the same one more than once).",
   chiNova:"★ Spirit Bomb (once/expedition) — a massive blast that hits every enemy in all three bands.",
   strain:"Pass the Strain — pick a strain: Indica (heal-over-time), Sativa (shield + dodge), Purple Haze (cleanse a debuff).",
   smokeCloud:"Smoke Cloud — a mellow haze; the whole squad heals a little.",
@@ -1200,7 +1201,6 @@ function arm(kind){
   if(kind==="prank")    S.pending={type:"prank",actor:a.id,gagPick:true};
   if(kind==="marbles")  S.pending={type:"marbles",actor:a.id};
   if(kind==="barrage")  S.pending={type:"barrage",actor:a.id};
-  if(kind==="chibolt")  S.pending={type:"chibolt",actor:a.id,targets:"enemy"};
   if(kind==="strain")   S.pending={type:"strain",actor:a.id,strainPick:true};
   if(kind==="blows")    S.pending={type:"blows",actor:a.id,targets:"enemy"};
   if(kind==="rage")     S.pending={type:"rage",actor:a.id,targets:"enemy"};
@@ -1235,7 +1235,6 @@ function pick(arg){
   if(type==="mausoleum"){ sigMausoleum(a,target); return; }
   if(type==="wreck"){ sigWreckingThrow(a,target); return; }
   if(type==="goolash"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Goo Lash hits Engaged or Near."; return; } gooLash(a,target); return; }
-  if(type==="chibolt"){ chiBolt(a,target); return; }
   if(type==="prank"){ prank(a,target); return; }
   if(type==="strain"){ strain(a,target); return; }
   if(type==="blows"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Drunken Blows hit Engaged or Near."; return; } drunkenBlows(a,target); return; }
