@@ -543,23 +543,24 @@ function prank(actor,target){            // Trickster: the gag decides the effec
   const p=S.push; S.push=false; spend(actor,p?2:1);
   const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
   if(t==="fail"){ log(`  ${target.name} sidesteps the ${g}.`,"l-miss"); finishAction(actor); return; }
-  if(g==="Banana"){ damage(target,2,"a pratfall"); setSt(target,"slowed",2); setSt(target,"stagger",1); log(`  ${target.name} slips on a banana peel — Slowed + Staggered!`,"l-root"); }
-  else if(g==="Pie"){ setSt(target,"blinded",2); log(`  ${target.name} takes a pie to the face — Blinded!`,"l-root"); }
-  else { setSt(target,"rooted",2); log(`  ${target.name}'s laces are tied together — Rooted!`,"l-root"); }
+  const d = t==="full"?4:3;
+  if(g==="Banana"){ damage(target,d,"a pratfall"); setSt(target,"slowed",2); setSt(target,"stagger",1); log(`  ${target.name} slips on a banana peel — ${d} + Slowed + Staggered!`,"l-root"); }
+  else if(g==="Pie"){ damage(target,d,"a pie"); setSt(target,"blinded",2); log(`  ${target.name} eats a pie to the face — ${d} + Blinded!`,"l-root"); }
+  else { damage(target,d,"a trip"); setSt(target,"rooted",2); log(`  ${target.name} trips on tied laces — ${d} + Rooted!`,"l-root"); }
   finishAction(actor);
 }
-function marbles(actor,band){            // Trickster: scatter a band — Slow everyone there
+function marbles(actor,band){            // Trickster: scatter a band — chip damage + Slow everyone there
   spend(actor,1);
   const hit=liveEnemies().filter(e=>e.band===band);
-  hit.forEach(e=>setSt(e,"slowed",2));
-  log(`${actor.name} scatters marbles across ${BANDS[band]} — ${hit.length?"everyone there is Slowed":"but no one's there"}.`,"l-part");
+  hit.forEach(e=>{ damage(e,2,"marbles"); setSt(e,"slowed",2); });
+  log(`${actor.name} scatters marbles across ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 2 + Slowed`:"but no one's there"}.`,"l-part");
   finishAction(actor);
 }
 function sigWholeBag(actor){             // Trickster signature: a random prank on every enemy
   spend(actor,4); actor.sigDone=true;
   log(`${actor.name} dumps THE WHOLE BAG on the warband:`,"l-root");
   const gags=["slowed","blinded","stagger","rooted"];
-  liveEnemies().forEach(e=>{ const g=gags[Math.floor(Math.random()*gags.length)]; setSt(e,g,2); log(`  ${e.name}: ${g}!`,"l-part"); });
+  liveEnemies().forEach(e=>{ damage(e,4,"the whole bag"); const g=gags[Math.floor(Math.random()*gags.length)]; setSt(e,g,2); log(`  ${e.name} takes 4 + ${g}!`,"l-part"); });
   finishAction(actor);
 }
 function pickEnemy(){ const t=liveEnemies(); return t.length?t[Math.floor(Math.random()*t.length)]:null; }
@@ -1096,7 +1097,7 @@ function render(){
     : a.role==="Goo"
     ? "Goo tank: Engulf to regen + taunt — but keep the enemy busy elsewhere, since it can't regen on a round it's hit. Goo Splash hits two bands."
     : a.role==="Trick"
-    ? "Trickster: Prank a foe (banana = slow+stagger, pie = blind, laces = root). Marbles slows a whole band. Pure control."
+    ? "Trickster: Pranks hit AND debilitate (banana = slow+stagger, pie = blind, laces = root). Marbles damages+slows a band. Control with teeth."
     : a.role==="Chi"
     ? "Chi: Barrage a band for spread damage, Bolt a single foe. Squishy — stay at the back. Spirit Bomb nukes all three bands."
     : a.role==="Ganja"
@@ -1146,9 +1147,9 @@ const TIPS = {
   engulf:"Engulf — swell into goo: regenerate each round + taunt enemies onto you. (No regen on a round you get hit.)",
   goolash:"Goo Lash — sticky melee that Slows the enemy.",
   gooSplash:"★ Goo Splash (once/expedition) — splash every enemy in the Engaged & Near bands + Slow.",
-  prank:"Prank — conjure a gag: Banana (slow + stagger), Pie (blind), or Laces (root).",
-  marbles:"Marbles — scatter a band; every enemy there is Slowed.",
-  wholeBag:"★ The Whole Bag (once/expedition) — a random prank (slow / blind / stagger / root) on every enemy.",
+  prank:"Prank — a gag that hits AND debilitates: Banana (damage + slow + stagger), Pie (damage + blind), Laces (damage + root).",
+  marbles:"Marbles — scatter a band; every enemy there takes damage + is Slowed.",
+  wholeBag:"★ The Whole Bag (once/expedition) — damage every enemy and hit each with a random prank (slow / blind / stagger / root).",
   barrage:"Chi Barrage — spray a whole band, damaging every enemy in it.",
   flurry:"Chi Flurry — three guaranteed quick strikes at random enemies (can hit the same one more than once).",
   chiNova:"★ Spirit Bomb (once/expedition) — a massive blast that hits every enemy in all three bands.",
