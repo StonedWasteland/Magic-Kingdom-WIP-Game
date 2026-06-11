@@ -244,7 +244,7 @@ function baseState(team,mode){
     units: freshParty(team).concat(foes(1)) };
 }
 function newGame(team){                                     // single skirmish
-  team = team || (S && S.team) || 1;
+  team = (team===undefined || team===null) ? ((S && S.team) || 1) : team;   // note: 0 = custom squad
   S = baseState(team,"single");
   snapRound();
   document.getElementById("log").innerHTML = "";
@@ -252,7 +252,7 @@ function newGame(team){                                     // single skirmish
   render();
 }
 function startExpedition(team){                             // a 3-fight run; wounds carry between fights
-  team = team || (S && S.team) || 1;
+  team = (team===undefined || team===null) ? ((S && S.team) || 1) : team;   // note: 0 = custom squad
   S = baseState(team,"expedition");
   snapRound();
   document.getElementById("log").innerHTML = "";
