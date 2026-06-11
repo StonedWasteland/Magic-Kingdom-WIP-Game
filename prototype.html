@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:1))))" title="Cycle to the next squad (1 → 2 → 3 → 4 → 5)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:1)))))" title="Cycle to the next squad (1 → … → 6)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -178,16 +178,23 @@ function team5(){ return [
   { id:"chrona", name:"Chrona", role:"Time",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"deadeye",name:"Deadeye",role:"Gun",     side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team6(){ return [
+  { id:"phantasm", name:"Phantasm", role:"Illusion", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"puppet",   name:"Puppeteer",role:"Charm",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"migraine", name:"Migraine", role:"Psychic",  side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"empath",   name:"Empath",   role:"Empath",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"phobia",   name:"Phobia",   role:"Fear",     side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -234,7 +241,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -289,12 +296,12 @@ function log(msg,cls){ const d=document.createElement("div");
   if(cls) d.className=cls; d.textContent=msg;
   const L=document.getElementById("log"); L.appendChild(d); L.scrollTop=L.scrollHeight; }
 
-function damage(u,n,how){                            // returns true if it landed, false if dodged
+function damage(u,n,how,pierce){                     // returns true if it landed, false if dodged. pierce = ignore Barrier
   if((u.dodge||0)>0){ u.dodge--;                    // 1 Dodge stack negates this whole instance of damage
     log(`  ${u.name} dodges the ${how||"hit"}! (Dodge ${u.dodge} left)`,"l-miss"); return false; }
   u._hit=true;                                     // took damage this round (Gloop's regen is suppressed when hit)
   n += (u.st.shred||0);                            // Shred amplifier: take more from every source
-  if((u.barrier||0)>0){                            // Barrier shields soak before HP
+  if(!pierce && (u.barrier||0)>0){                 // Barrier shields soak before HP (psychic damage pierces it)
     const soak=Math.min(u.barrier,n); u.barrier-=soak; n-=soak;
     if(soak>0) log(`  ${u.name}'s Barrier absorbs ${soak}${u.barrier>0?` (${u.barrier} left)`:" — shattered"}.`,"l-miss");
   }
@@ -979,6 +986,122 @@ function sigHailOfLead(actor){            // Gun signature: empty every chamber 
   finishAction(actor);
 }
 
+/* ─── Team 6 actions (the Mindbenders) ────────────────────────────────────── */
+function mirrorImages(actor){            // Illusion: taunt + illusory decoys (Dodge) soak the hits
+  spend(actor,1);
+  setSt(actor,"taunting",2); actor.dodge=(actor.dodge||0)+3;
+  log(`${actor.name} splits into mirror images — Taunting + 3 Dodge (decoys eat the hits).`,"l-root");
+  finishAction(actor);
+}
+function cloak(actor,target){            // Illusion: hide an ally (untargetable)
+  spend(actor,1);
+  setSt(target,"hidden",1);
+  log(`${actor.name} cloaks ${target.name} in illusion — Hidden (enemies can't target them).`,"l-hit");
+  finishAction(actor);
+}
+function phantomStrike(actor,target){    // Illusion: a disorienting jab — damage + Confuse
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s phantom misses ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"Psychic"); setSt(target,"confused", t==="full"?2:1); log(`  ${target.name} takes ${t==="full"?3:2} + Confused.`,"l-root"); }
+  finishAction(actor);
+}
+function sigVanishingAct(actor){          // Illusion sig: whole squad Hidden — enemies flail at phantoms
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>setSt(u,"hidden",1));
+  log(`${actor.name} pulls a VANISHING ACT — the whole squad is Hidden; the warband's blows find only phantoms.`,"l-root");
+  finishAction(actor);
+}
+function charm(actor,target){            // Charm: enemy attacks its own side (directed — never itself)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} resists the strings.`,"l-miss"); }
+  else { damage(target,2,"Psychic"); setSt(target,"charmed", t==="full"?2:1); log(`  ${target.name} is CHARMED — it'll turn on its allies.`,"l-root"); }
+  finishAction(actor);
+}
+function suggestion(actor,band){         // Charm: Confuse a whole band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,1,"Psychic"); setSt(e,"confused",2); });
+  log(`${actor.name} plants a suggestion across ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 1 + Confused`:"but it's empty"}.`,"l-root");
+  finishAction(actor);
+}
+function sigGrandPuppetry(actor){         // Charm sig: charm the whole warband
+  spend(actor,4); actor.sigDone=true;
+  liveEnemies().forEach(e=>setSt(e,"charmed",2));
+  log(`${actor.name} seizes every mind — GRAND PUPPETRY: the whole warband turns on itself!`,"l-root");
+  finishAction(actor);
+}
+function psiBolt(actor,target){          // Psychic: mind damage that ignores Barrier; +vs the afflicted
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s psi-bolt misses ${target.name}.`,"l-miss"); }
+  else { const afflicted=target.st.feared||target.st.confused||target.st.charmed; const d=(t==="full"?5:4)+(afflicted?2:0);
+    damage(target,d,"Psychic",true); log(`  ${target.name} takes ${d} psychic${afflicted?" (mind laid bare!)":""} — ignores Barrier.`,"l-hit"); }
+  finishAction(actor);
+}
+function mindquake(actor,band){          // Psychic: AoE mind damage to a band (ignores Barrier)
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  if(!hit.length){ log(`${actor.name}'s mindquake finds no one at ${BANDS[band]}.`,"l-miss"); finishAction(actor); return; }
+  log(`${actor.name} sends a mindquake through ${BANDS[band]}:`,"l-part");
+  hit.forEach(e=>{ damage(e,3,"Psychic",true); log(`  ${e.name} takes 3 (psychic).`,"l-part"); });
+  finishAction(actor);
+}
+function sigAneurysm(actor){             // Psychic sig: massive psychic damage to all (ignores defenses)
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} triggers a mass ANEURYSM:`,"l-hit");
+  liveEnemies().forEach(e=>{ const afflicted=e.st.feared||e.st.confused||e.st.charmed; const d=5+(afflicted?2:0); damage(e,d,"Psychic",true); log(`  ${e.name} takes ${d} psychic.`,"l-part"); });
+  finishAction(actor);
+}
+function premonition(actor,target){      // Empath: grant an ally foresight (Dodge)
+  spend(actor,1);
+  target.dodge=(target.dodge||0)+2;
+  log(`${actor.name} grants ${target.name} a premonition — +2 Dodge (sees the next 2 hits coming).`,"l-hit");
+  finishAction(actor);
+}
+function soothe(actor,target){           // Empath: heal + calm (cleanse) an ally
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+3);
+  const bad=["burning","bleeding","sickness","poison","slowed","rooted","entangled","blinded","confused","feared","leeching"]; let c=0;
+  bad.forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  log(`${actor.name} soothes ${target.name} — heals ${target.hp-b}${c?`, calms ${c} affliction(s)`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function sigCollective(actor){           // Empath sig: whole squad foresight + heal
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ u.dodge=(u.dodge||0)+2; u.hp=Math.min(u.max,u.hp+3); });
+  log(`${actor.name} opens a COLLECTIVE mind — the whole squad heals 3 + gains 2 Dodge.`,"l-hit");
+  finishAction(actor);
+}
+function terrorize(actor,target){        // Fear: damage + Fear
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} stands its ground.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"terror"); setSt(target,"feared", t==="full"?2:1); log(`  ${target.name} takes ${t==="full"?3:2} + is Feared (cowers, can't advance, aims poorly).`,"l-root"); }
+  finishAction(actor);
+}
+function preyOnFear(actor,target){       // Fear: execute the terrified — big vs Feared
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} misses ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  const scared=target.st.feared>0; const d=(t==="full"?4:3)+(scared?4:0);
+  damage(target,d,"terror"); log(`  ${target.name} takes ${d}${scared?" — it PREYS on the terrified!":""}.`,"l-hit");
+  finishAction(actor);
+}
+function shadowstep(actor){              // Fear: reposition + Dodge
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} melts into shadow — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigNightTerror(actor){          // Fear sig: Fear all + heavy damage to the Feared
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} unleashes a NIGHT TERROR:`,"l-bad");
+  liveEnemies().forEach(e=>{ const scared=e.st.feared>0; damage(e,scared?7:4,"terror"); setSt(e,"feared",2); log(`  ${e.name} takes ${scared?7:4} + Feared.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -1038,15 +1161,15 @@ function enemyTurn(){
   liveEnemies().forEach(e=>{
     if(e.st.stagger){ e.st.stagger=0; log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
     if(e.st.suppressed){ e.st.suppressed--; log(`${e.name} is entombed (Suppressed) — can't act.`,"l-root"); return; }
-    if(e.st.confused){ enemyAttack(e); return; }          // Confused: lashes out at its own side
+    if(e.st.confused || e.st.charmed){ enemyAttack(e); return; }  // Confused/Charmed: lashes out at its own side
     if(e.role==="ranged"){ enemyAttack(e); return; }     // Marauder: fires from any range, never needs to close
     if(e.role==="disruptor"){ disrupt(e); return; }       // Disruptor: strips a buff instead of attacking
     if(e.role==="caster"){ castFire(e); return; }         // Cultist: ranged fire + Burning
     if(e.role==="binder"){ castFrost(e); return; }        // Frostbinder: ranged Slow
     if(e.role==="mender"){ mend(e); return; }             // Mender: heals an ally
     if(e.role==="alpha"){ rally(e); return; }             // Pack Alpha: shields + heals an ally
-    if(e.st.rooted || e.st.entangled || e.st.heavy){    // pinned: can't advance, only attacks if already Engaged
-      const why = e.st.rooted?"Rooted":e.st.entangled?"Entangled":"Heavy";
+    if(e.st.rooted || e.st.entangled || e.st.heavy || e.st.feared){  // pinned: can't advance, only attacks if Engaged
+      const why = e.st.rooted?"Rooted":e.st.entangled?"Entangled":e.st.feared?"Feared":"Heavy";
       if(e.band===0) enemyAttack(e);
       else log(`${e.name} is pinned (${why}) — can't advance.`,"l-root");
       return;
@@ -1064,18 +1187,20 @@ function enemyTurn(){
 }
 function enemyAttack(e){
   let targets, taunter=null;
-  if(e.st.confused){ targets=liveEnemies(); }          // Confused: turns on its own side (may even hit itself)
-  else { targets=liveParty(); if(!targets.length) return;
+  if(e.st.confused || e.st.charmed){ targets=liveEnemies(); if(e.st.charmed) targets=targets.filter(x=>x!==e); }  // turn on own side (Charm spares itself)
+  else { targets=liveParty().filter(u=>!u.st.hidden);            // can't target Hidden allies
+    if(!targets.length){ log(`${e.name} lashes at phantoms — no one to hit.`,"l-miss"); return; }
   if(e.role!=="ranged"){                              // ranged shoots past the front — ignores taunt & the well
     taunter=targets.find(u=>u.st.taunting);
     if(taunter) targets=[taunter];
     else if(S.well>=0 && e.band===S.well){            // gravity aggro: dragged into the well = swing at the anchor
-      const owner=S.units.find(u=>alive(u)&&u.well); if(owner) targets=[owner];
+      const owner=S.units.find(u=>alive(u)&&u.well&&!u.st.hidden); if(owner) targets=[owner];
     }
   }
   }
+  if(!targets.length) return;
   const tgt=targets[Math.floor(Math.random()*targets.length)];
-  let mod=0; if(e.st.slowed) mod-=1; if(e.st.blinded) mod-=1;   // Blinded enemies aim worse (trimmed from -2)
+  let mod=0; if(e.st.slowed) mod-=1; if(e.st.blinded) mod-=1; if(e.st.feared) mod-=2;   // Feared cowers, aims poorly
   const r=roll2(); const total=r.sum+mod; const t=tier(total);
   const verb = e.role==="ranged" ? "fires at" : "swings at";
   log(`${e.name} ${verb} ${tgt.name}${taunter?" (taunted)":""}: ${r.a}+${r.b}=${r.sum}${mod?` ${mod}`:""} → ${total}: ${t.toUpperCase()}`,
@@ -1200,7 +1325,7 @@ function endOfRound(){
   S.glass=S.glass.map(n=>Math.max(0,n-1));
   S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
   S.units.forEach(u=>{ u._hit=false; });                                        // reset per-round "was hit" (Gloop regen)
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison","confused","leeching"].forEach(k=>{
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison","confused","leeching","feared","charmed","hidden"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });   // NOTE: Sickness is NOT here — it compounds all fight (cleanse to clear)
 
   // win/lose
@@ -1230,7 +1355,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:1)));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:1))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -1265,6 +1390,9 @@ function unitCard(u){
     if(u.st.confused)chips.push(chip("taunt",`🌀 Confused ${u.st.confused}`,"Confused — on its turn it attacks its own side (or itself) instead of you."));
     if(u.st.leeching)chips.push(chip("bleed",`🦟 Leeching ${u.st.leeching}`,"Leeching — takes 2 each round and heals the Siphon for 2."));
     if(u.extraActs>0)chips.push(chip("stoked",`⏩ Hasted ${u.extraActs}`,`Hasted — has ${u.extraActs} extra action(s) this turn.`));
+    if(u.st.feared)chips.push(chip("taunt",`😱 Feared ${u.st.feared}`,"Feared — cowers: can't advance and aims poorly (−2 to its attacks)."));
+    if(u.st.charmed)chips.push(chip("taunt",`🪀 Charmed ${u.st.charmed}`,"Charmed — attacks its own side (never itself)."));
+    if(u.st.hidden)chips.push(chip("stoked",`👁 Hidden ${u.st.hidden}`,"Hidden — enemies can't target this unit."));
     if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −1 to this unit's attack rolls."));
     if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
     if(u.st.thorns)  chips.push(chip("regen",`❧ Thorns ${u.st.thorns}`,"Thorns — anyone who hits this unit takes 2 damage back."));
@@ -1324,7 +1452,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -1332,6 +1460,8 @@ function render(){
         : pt==="tarpit" ? "Choose a band to flood with tar (mires everyone there):"
         : pt==="irradiate" ? "Choose a band to irradiate (stacks Sickness on everyone there):"
         : pt==="mirrors" ? "Choose a band to fill with mirrors (Confuses everyone there):"
+        : pt==="suggestion" ? "Choose a band to plant a suggestion (Confuses everyone there):"
+        : pt==="mindquake" ? "Choose a band to mindquake (psychic damage, ignores Barriers):"
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -1388,6 +1518,14 @@ function render(){
         : pt==="rewind" ? "Click an ally to rewind their wounds."
         : pt==="stasis" ? "Click an ally to freeze out of time (cleanse + shield)."
         : pt==="aim" ? `Click any enemy to fire the ${S.pending.gun}.`
+        : pt==="cloak" ? "Click an ally to cloak (Hidden — untargetable)."
+        : pt==="phantom" ? "Click any enemy for a Phantom Strike (+Confuse)."
+        : pt==="charm" ? "Click any enemy to Charm (it attacks its own side)."
+        : pt==="psibolt" ? "Click any enemy for a Psi-Bolt (ignores Barrier)."
+        : pt==="premonition" ? "Click an ally to grant a premonition (+Dodge)."
+        : pt==="soothe" ? "Click an ally to heal + calm."
+        : pt==="terrorize" ? "Click an enemy at Engaged or Near to Terrorize."
+        : pt==="prey" ? "Click an enemy at Engaged or Near (huge vs the Feared)."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -1506,6 +1644,28 @@ function render(){
     b.push(btn("Take Aim","arm('aim')",false,TIPS.aim));
     b.push(btn("Combat Roll (+Dodge)",`combatRoll(U('${a.id}'))`,false,TIPS.roll));
     b.push(btn("★ Hail of Lead",`sigHailOfLead(U('${a.id}'))`, a.sigDone, TIPS.hail));
+  } else if(a.role==="Illusion"){
+    b.push(btn("Mirror Images (taunt+dodge)",`mirrorImages(U('${a.id}'))`,false,TIPS.mirrorImages));
+    b.push(btn("Cloak (hide ally)","arm('cloak')",false,TIPS.cloak));
+    b.push(btn("Phantom Strike","arm('phantom')",false,TIPS.phantom));
+    b.push(btn("★ Vanishing Act",`sigVanishingAct(U('${a.id}'))`, a.sigDone, TIPS.vanishing));
+  } else if(a.role==="Charm"){
+    b.push(btn("Charm","arm('charm')",false,TIPS.charm));
+    b.push(btn("Suggestion (zone)","arm('suggestion')",false,TIPS.suggestion));
+    b.push(btn("★ Grand Puppetry",`sigGrandPuppetry(U('${a.id}'))`, a.sigDone, TIPS.grandPuppetry));
+  } else if(a.role==="Psychic"){
+    b.push(btn("Psi-Bolt","arm('psibolt')",false,TIPS.psibolt));
+    b.push(btn("Mindquake (zone)","arm('mindquake')",false,TIPS.mindquake));
+    b.push(btn("★ Aneurysm",`sigAneurysm(U('${a.id}'))`, a.sigDone, TIPS.aneurysm));
+  } else if(a.role==="Empath"){
+    b.push(btn("Premonition (+Dodge)","arm('premonition')",false,TIPS.premonition));
+    b.push(btn("Soothe (heal + calm)","arm('soothe')",false,TIPS.soothe));
+    b.push(btn("★ Collective",`sigCollective(U('${a.id}'))`, a.sigDone, TIPS.collective));
+  } else if(a.role==="Fear"){
+    b.push(btn("Terrorize","arm('terrorize')",false,TIPS.terrorize));
+    b.push(btn("Prey on Fear","arm('prey')",false,TIPS.prey));
+    b.push(btn("Shadowstep (+Dodge)",`shadowstep(U('${a.id}'))`,false,TIPS.shadowstep));
+    b.push(btn("★ Night Terror",`sigNightTerror(U('${a.id}'))`, a.sigDone, TIPS.nightTerror));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -1558,6 +1718,16 @@ function render(){
     ? "Chrona: Haste gives an ally an EXTRA action; Rewind un-takes the damage they took this round; Stasis cleanses + shields. Overclock = a free turn for everyone."
     : a.role==="Gun"
     ? "Deadeye: Take Aim and pick your gun (Pistol/Rifle/Shotgun/SMG). Combat Roll for mobility + Dodge. Squishy — hit hard, don't get hit."
+    : a.role==="Illusion"
+    ? "Illusion tank: Mirror Images (taunt + dodge decoys); Cloak an ally to Hidden (untargetable). Vanishing Act hides the whole squad."
+    : a.role==="Charm"
+    ? "Charm: turn enemies on their own side — Charm one (directed), Suggestion confuses a band. Grand Puppetry charms them all."
+    : a.role==="Psychic"
+    ? "Psychic: Psi-Bolt & Mindquake deal mind damage that IGNORES Barriers, and hit harder vs Feared/Confused/Charmed foes. Squishy."
+    : a.role==="Empath"
+    ? "Empath: Premonition grants Dodge (foresight), Soothe heals + calms (cleanse). Collective buffs the whole squad."
+    : a.role==="Fear"
+    ? "Fear: Terrorize a foe so it cowers, then Prey on Fear for big damage vs the Feared. Shadowstep to reposition + Dodge."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -1653,6 +1823,24 @@ const TIPS = {
   aim:"Take Aim — pick a gun: Pistol (quick), Rifle (big single), Shotgun (heavy + knockback), SMG (a spray of three).",
   roll:"Combat Roll — reposition freely + gain a Dodge. Stay alive (you're squishy).",
   hail:"★ Hail of Lead (once/expedition) — empty every chamber: heavy damage across the whole enemy line.",
+  // Team 6 (Mindbenders)
+  mirrorImages:"Mirror Images — taunt the enemy onto you + 3 Dodge (the illusory copies eat the hits).",
+  cloak:"Cloak — make an ally Hidden: enemies can't target them at all for a round.",
+  phantom:"Phantom Strike — a disorienting psychic jab: damage + Confuse.",
+  vanishing:"★ Vanishing Act (once/expedition) — the WHOLE squad goes Hidden; the warband's blows hit only phantoms.",
+  charm:"Charm — seize an enemy's mind: it attacks its own allies (never itself).",
+  suggestion:"Suggestion — Confuse every enemy in a band (+ a little psychic damage).",
+  grandPuppetry:"★ Grand Puppetry (once/expedition) — Charm the entire warband: they all turn on each other.",
+  psibolt:"Psi-Bolt — mind damage that IGNORES Barriers; hits harder vs Feared/Confused/Charmed foes.",
+  mindquake:"Mindquake — psychic AoE on a band (ignores Barriers).",
+  aneurysm:"★ Aneurysm (once/expedition) — massive psychic damage to every enemy, ignoring defenses (bonus vs the afflicted).",
+  premonition:"Premonition — grant an ally foresight: +2 Dodge (the next 2 hits auto-miss).",
+  soothe:"Soothe — heal an ally and calm them (cleanse their debuffs).",
+  collective:"★ Collective (once/expedition) — heal the whole squad + grant everyone Dodge.",
+  terrorize:"Terrorize — damage + Fear a foe: it cowers (can't advance, aims poorly).",
+  prey:"Prey on Fear — a strike that's devastating against an already-Feared target.",
+  shadowstep:"Shadowstep — reposition freely + gain a Dodge.",
+  nightTerror:"★ Night Terror (once/expedition) — Fear every enemy and hit the already-Feared hardest.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -1719,6 +1907,16 @@ function arm(kind){
   if(kind==="rewind")   S.pending={type:"rewind",actor:a.id,targets:"ally"};
   if(kind==="stasis")   S.pending={type:"stasis",actor:a.id,targets:"ally"};
   if(kind==="aim")      S.pending={type:"aim",actor:a.id,gunPick:true};
+  if(kind==="cloak")    S.pending={type:"cloak",actor:a.id,targets:"ally"};
+  if(kind==="phantom")  S.pending={type:"phantom",actor:a.id,targets:"enemy"};
+  if(kind==="charm")    S.pending={type:"charm",actor:a.id,targets:"enemy"};
+  if(kind==="suggestion")S.pending={type:"suggestion",actor:a.id};
+  if(kind==="psibolt")  S.pending={type:"psibolt",actor:a.id,targets:"enemy"};
+  if(kind==="mindquake")S.pending={type:"mindquake",actor:a.id};
+  if(kind==="premonition")S.pending={type:"premonition",actor:a.id,targets:"ally"};
+  if(kind==="soothe")   S.pending={type:"soothe",actor:a.id,targets:"ally"};
+  if(kind==="terrorize")S.pending={type:"terrorize",actor:a.id,targets:"enemy"};
+  if(kind==="prey")     S.pending={type:"prey",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -1732,6 +1930,8 @@ function pickBand(i){
   else if(t==="tarpit") tarPit(a,i);
   else if(t==="irradiate") irradiate(a,i);
   else if(t==="mirrors") hallOfMirrors(a,i);
+  else if(t==="suggestion") suggestion(a,i);
+  else if(t==="mindquake") mindquake(a,i);
 }
 function pickGun(g){ if(!S.pending) return; const a=U(S.pending.actor);
   if(g==="SMG"){ S.pending.gun="SMG"; takeAim(a,null); return; }   // SMG needs no target
@@ -1777,6 +1977,14 @@ function pick(arg){
   if(type==="rewind"){ rewind(a,target); return; }
   if(type==="stasis"){ stasis(a,target); return; }
   if(type==="aim"){ takeAim(a,target); return; }
+  if(type==="cloak"){ cloak(a,target); return; }
+  if(type==="phantom"){ phantomStrike(a,target); return; }
+  if(type==="charm"){ charm(a,target); return; }
+  if(type==="psibolt"){ psiBolt(a,target); return; }
+  if(type==="premonition"){ premonition(a,target); return; }
+  if(type==="soothe"){ soothe(a,target); return; }
+  if(type==="terrorize"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Terrorize hits Engaged or Near."; return; } terrorize(a,target); return; }
+  if(type==="prey"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Prey on Fear hits Engaged or Near."; return; } preyOnFear(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
