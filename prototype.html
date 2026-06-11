@@ -81,7 +81,7 @@
   <div class="doom">TEAM <b id="teamlabel" style="color:var(--ink)">1</b></div>
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="startExpedition(S.team)" style="margin-left:auto" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:1)))" title="Cycle to the next squad (1 → 2 → 3 → 4)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:1))))" title="Cycle to the next squad (1 → 2 → 3 → 4 → 5)">Switch squad ⇄</button>
 </div>
 
 <div class="cols">
@@ -140,7 +140,15 @@ function team4(){ return [
   { id:"mel",    name:"Mel",    role:"Honey", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"mercer", name:"Mercer", role:"Quick", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
-function freshParty(team){ return team===4?team4():team===3?team3():team===2?team2():team1(); }
+function team5(){ return [
+  { id:"mirage", name:"Mirage", role:"Confuse", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"siphon", name:"Siphon", role:"Siphon",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"prism",  name:"Prism",  role:"Prism",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"chrona", name:"Chrona", role:"Time",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"deadeye",name:"Deadeye",role:"Gun",     side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
+function freshParty(team){ return team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1(); }
+function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 function foes(fight){                                       // a varied warband per expedition fight
   if(fight>=3) return [                                    // climax — boss + buffer + caster + grunts
     mk("warlord","Warlord","brute",40,2,{ctrlImmune:true,boss:true}),
@@ -165,7 +173,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -177,6 +185,7 @@ function baseState(team,mode){
 function newGame(team){                                     // single skirmish
   team = team || (S && S.team) || 1;
   S = baseState(team,"single");
+  snapRound();
   document.getElementById("log").innerHTML = "";
   log(introLine(team), "l-round");
   render();
@@ -184,6 +193,7 @@ function newGame(team){                                     // single skirmish
 function startExpedition(team){                             // a 3-fight run; wounds carry between fights
   team = team || (S && S.team) || 1;
   S = baseState(team,"expedition");
+  snapRound();
   document.getElementById("log").innerHTML = "";
   log(`EXPEDITION — Fight 1 of ${S.expTotal}. Wounds carry between fights; survive all ${S.expTotal} to win.`,"l-round");
   log(introLine(team), "l-round");
@@ -194,13 +204,14 @@ function nextFight(){                                        // interlude → ne
   p.forEach(u=>{
     if(!alive(u)){ u.hp=Math.ceil(u.max*0.3); u.st.down=false; }  // the fallen are dragged on, badly battered
     else u.hp=Math.min(u.max, u.hp + Math.ceil(u.max*0.2));       // a short breather — not a full heal
-    u.strain=0; u.st={}; u.barrier=0; u.dodge=0; u.stance=false; u.well=false; u.acted=false; u.moved=false;
+    u.strain=0; u.st={}; u.barrier=0; u.dodge=0; u.extraActs=0; u.stance=false; u.well=false; u.acted=false; u.moved=false;
     // sigDone is NOT reset — Signatures are once per EXPEDITION, not per fight.
   });
   S.expFight++;
   S.round=1; S.doom=10; S.phase="party"; S.pending=null; S.over=null; S.push=false;
   S.fire=[0,0,0]; S.grown=[0,0,0]; S.glass=[0,0,0]; S.well=-1;
   S.units = p.concat(foes(S.expFight));
+  snapRound();
   log(`— Fight ${S.expFight} of ${S.expTotal} — ${S.expFight===S.expTotal?"the WARLORD leads the final assault!":"a larger warband closes in."} —`,"l-round");
   promptParty();
 }
@@ -773,6 +784,140 @@ function sigArgentRush(actor){           // Quicksilver signature: flow through 
   finishAction(actor);
 }
 
+/* ─── Team 5 actions ──────────────────────────────────────────────────────── */
+function vertigo(actor,target){          // Confuse: one enemy turns on its own side
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} shakes off the vertigo.`,"l-miss"); }
+  else { setSt(target,"confused", t==="full"?2:1); log(`  ${target.name} is CONFUSED — it'll lash out at its own side.`,"l-root"); }
+  finishAction(actor);
+}
+function hallOfMirrors(actor,band){       // Confuse a whole band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>setSt(e,"confused",2));
+  log(`${actor.name} fills ${BANDS[band]} with mirrors — ${hit.length?`${hit.length} foe(s) Confused`:"but it's empty"}.`,"l-root");
+  finishAction(actor);
+}
+function blur(actor){                     // Confuse: become an illusion — gain Dodge
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+2;
+  log(`${actor.name} blurs into afterimages — +2 Dodge.`,"l-hit");
+  finishAction(actor);
+}
+function sigBedlam(actor){                // Confuse signature: the whole warband turns on itself
+  spend(actor,4); actor.sigDone=true;
+  liveEnemies().forEach(e=>setSt(e,"confused",2));
+  log(`${actor.name} unleashes BEDLAM — the entire warband turns on each other!`,"l-root");
+  finishAction(actor);
+}
+function drain(actor,target){             // Siphon: damage + Slow + heal self
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s drain misses ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  const d=t==="full"?4:3; damage(target,d,"life-drain"); setSt(target,"slowed",2);
+  const b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+Math.ceil(d/2));
+  log(`  ${target.name} takes ${d} + Slowed; ${actor.name} drinks ${actor.hp-b}.`,"l-hit");
+  finishAction(actor);
+}
+function leech(actor,target){             // Siphon: Leeching DoT — drains + heals Siphon each round
+  spend(actor,1);
+  setSt(target,"leeching",3);
+  log(`${actor.name} sinks a leech into ${target.name} — Leeching (drains it + heals Siphon each round).`,"l-root");
+  finishAction(actor);
+}
+function enfeeble(actor,target){          // Siphon: Shred + drain
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s curse slips off ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  damage(target,2,"withering"); target.st.shred=Math.min(6,(target.st.shred||0)+2);
+  const b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+2);
+  log(`  ${target.name} takes 2 + Shred ${target.st.shred} (weakened); ${actor.name} drinks ${actor.hp-b}.`,"l-hit");
+  finishAction(actor);
+}
+function sigExsanguinate(actor){          // Siphon signature: drain all, heal the squad
+  spend(actor,4); actor.sigDone=true;
+  let heal=0; liveEnemies().forEach(e=>{ damage(e,4,"Exsanguinate"); heal+=2; });
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+heal); });
+  log(`${actor.name} casts EXSANGUINATE — the warband bleeds 4 each; the squad drinks ${heal}.`,"l-bad");
+  finishAction(actor);
+}
+function focus(actor,target){             // Prism: 1 enemy, hard
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s beam misses ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?7:5,"Focused Light"); log(`  ${target.name} takes ${t==="full"?7:5} (focused).`,"l-hit"); }
+  finishAction(actor);
+}
+function split(actor){                    // Prism: 3 random enemies, medium
+  spend(actor,1);
+  log(`${actor.name} splits the beam into three:`,"l-part");
+  for(let i=0;i<3;i++){ const e=pickEnemy(); if(e){ damage(e,4,"Split Light"); log(`  → ${e.name} takes 4.`,"l-part"); } }
+  finishAction(actor);
+}
+function scatter(actor){                  // Prism: all enemies, low
+  spend(actor,1);
+  log(`${actor.name} scatters light across the field:`,"l-part");
+  liveEnemies().forEach(e=>{ damage(e,2,"Scattered Light"); log(`  ${e.name} takes 2.`,"l-part"); });
+  finishAction(actor);
+}
+function sigWhiteLight(actor){            // Prism signature: all enemies, hard
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} releases WHITE LIGHT — the full spectrum at once:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,6,"White Light"); log(`  ${e.name} takes 6.`,"l-part"); });
+  finishAction(actor);
+}
+function haste(actor,target){             // Time: grant an ally an extra action
+  spend(actor,2);
+  target.extraActs=(target.extraActs||0)+1;
+  log(`${actor.name} hastes ${target.name} — an extra action this turn!`,"l-hit");
+  finishAction(actor);
+}
+function rewind(actor,target){            // Time: undo the damage an ally took this round
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max, Math.max(target.hp, target._snap||target.hp));
+  if(target.hp>b) log(`${actor.name} rewinds ${target.name} — un-takes ${target.hp-b} damage.`,"l-hit");
+  else log(`${actor.name} finds nothing to rewind on ${target.name}.`,"l-miss");
+  finishAction(actor);
+}
+function stasis(actor,target){            // Time: freeze an ally out of time — cleanse + untouchable
+  spend(actor,1);
+  target.dodge=(target.dodge||0)+3;
+  ["burning","bleeding","sickness","poison","slowed","rooted","entangled","blinded","leeching"].forEach(k=>{ if(target.st[k]) target.st[k]=0; });
+  log(`${actor.name} freezes ${target.name} out of time — cleansed + untouchable (Dodge 3).`,"l-hit");
+  finishAction(actor);
+}
+function sigOverclock(actor){             // Time signature: the whole squad takes an extra turn
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ if(u!==actor) u.extraActs=(u.extraActs||0)+1; });
+  log(`${actor.name} OVERCLOCKS time — the whole squad gets an extra action!`,"l-hit");
+  finishAction(actor);
+}
+function takeAim(actor,target){           // Gun: fire the chosen gun
+  const g=(S.pending&&S.pending.gun)||"Pistol"; S.pending=null;
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  if(g==="SMG"){ log(`${actor.name} sprays the SMG:`,"l-part"); for(let i=0;i<3;i++){ const e=pickEnemy(); if(e){ damage(e,2,"SMG"); log(`  → ${e.name} takes 2.`,"l-part"); } } finishAction(actor); return; }
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s ${g} shot misses ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  const full=(t==="full");
+  if(g==="Pistol"){ damage(target,full?5:4,"Pistol"); log(`  Pistol: ${full?5:4} to ${target.name}.`,full?"l-hit":"l-part"); }
+  else if(g==="Rifle"){ damage(target,full?8:6,"Rifle"); log(`  Rifle: ${full?8:6} to ${target.name} (high-caliber).`,full?"l-hit":"l-part"); }
+  else { damage(target,full?7:5,"Shotgun"); if(full && alive(target) && target.band<2 && !target.ctrlImmune){ target.band++; log(`  Shotgun: 7 + blasted back to ${BANDS[target.band]}.`,"l-hit"); } else log(`  Shotgun: ${full?7:5} to ${target.name}.`,full?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function combatRoll(actor){               // Gun: reposition + Dodge (mobile, squishy)
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} combat-rolls — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigHailOfLead(actor){            // Gun signature: empty every chamber across the line
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} unloads a HAIL OF LEAD:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"Hail of Lead"); log(`  ${e.name} takes 5.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -789,10 +934,11 @@ function setSt(u,k,n){
 }
 
 /* ─── turn flow ───────────────────────────────────────────────────────────── */
-function activeActor(){ return party().find(u=>alive(u)&&!u.acted) || null; }
+function activeActor(){ return party().find(u=>alive(u)&&(!u.acted || u.extraActs>0)) || null; }
 
 function finishAction(actor){
-  actor.acted=true;
+  if(actor.acted && actor.extraActs>0) actor.extraActs--;     // spent a Haste extra action
+  else actor.acted=true;
   S.pending=null; S.push=false;
   if(checkEnd()) return;                                       // win/lose the instant it lands — don't stall
   promptParty();
@@ -801,7 +947,7 @@ function finishAction(actor){
 function promptParty(){
   let a;
   while((a=activeActor()) && a.st.stagger){
-    a.st.stagger=0; a.acted=true;
+    a.st.stagger=0; a.acted=true; a.extraActs=0;               // Staggered loses the action(s), incl. Haste
     log(`${a.name} is Staggered — loses the action.`,"l-bad");
   }
   if(!activeActor()){ render(); setTimeout(enemyTurn,450); }   // party done → enemies
@@ -831,6 +977,7 @@ function enemyTurn(){
   liveEnemies().forEach(e=>{
     if(e.st.stagger){ e.st.stagger=0; log(`${e.name} is Staggered — fumbles its turn.`,"l-miss"); return; }
     if(e.st.suppressed){ e.st.suppressed--; log(`${e.name} is entombed (Suppressed) — can't act.`,"l-root"); return; }
+    if(e.st.confused){ enemyAttack(e); return; }          // Confused: lashes out at its own side
     if(e.role==="ranged"){ enemyAttack(e); return; }     // Marauder: fires from any range, never needs to close
     if(e.role==="disruptor"){ disrupt(e); return; }       // Disruptor: strips a buff instead of attacking
     if(e.role==="caster"){ castFire(e); return; }         // Cultist: ranged fire + Burning
@@ -855,14 +1002,16 @@ function enemyTurn(){
   setTimeout(endOfRound,550);
 }
 function enemyAttack(e){
-  let targets=liveParty(); if(!targets.length) return;
-  let taunter=null;
+  let targets, taunter=null;
+  if(e.st.confused){ targets=liveEnemies(); }          // Confused: turns on its own side (may even hit itself)
+  else { targets=liveParty(); if(!targets.length) return;
   if(e.role!=="ranged"){                              // ranged shoots past the front — ignores taunt & the well
     taunter=targets.find(u=>u.st.taunting);
     if(taunter) targets=[taunter];
     else if(S.well>=0 && e.band===S.well){            // gravity aggro: dragged into the well = swing at the anchor
       const owner=S.units.find(u=>alive(u)&&u.well); if(owner) targets=[owner];
     }
+  }
   }
   const tgt=targets[Math.floor(Math.random()*targets.length)];
   let mod=0; if(e.st.slowed) mod-=1; if(e.st.blinded) mod-=1;   // Blinded enemies aim worse (trimmed from -2)
@@ -929,6 +1078,9 @@ function endOfRound(){
     if(u.st.bleeding){ damage(u,2,"Bleeding"); log(`  ${u.name} bleeds for 2.`,"l-bad"); }
     if(u.st.sickness){ damage(u,u.st.sickness,"radiation sickness"); log(`  ${u.name} sickens for ${u.st.sickness} (stacks).`,"l-fire"); }
     if(u.st.poison){ damage(u,2,"poison"); log(`  ${u.name} suffers poison: 2.`,"l-part"); }
+    if(u.st.leeching){ damage(u,2,"the leech");        // Leeching: drains the enemy + heals the Siphon
+      const s=S.units.find(x=>x.role==="Siphon"&&alive(x)); if(s){ s.hp=Math.min(s.max,s.hp+2); }
+      log(`  ${u.name} is leeched for 2${s?` (Siphon drinks 2)`:""}.`,"l-bad"); }
     if(u.st.regen){
       // Cauterized: fire (a Burning tag, or standing in an On-Fire band) sears wounds shut → no heal
       const cauterized = u.st.burning>0 || (S.fire[u.band]>0 && u.affinity!=="fire");
@@ -987,7 +1139,7 @@ function endOfRound(){
   S.glass=S.glass.map(n=>Math.max(0,n-1));
   S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
   S.units.forEach(u=>{ u._hit=false; });                                        // reset per-round "was hit" (Gloop regen)
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison"].forEach(k=>{
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison","confused","leeching"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });   // NOTE: Sickness is NOT here — it compounds all fight (cleanse to clear)
 
   // win/lose
@@ -998,7 +1150,8 @@ function endOfRound(){
 
   // next round
   S.round++; S.phase="party";
-  S.units.forEach(u=>{ u.acted=false; u.moved=false; });
+  S.units.forEach(u=>{ u.acted=false; u.moved=false; u.extraActs=0; });
+  snapRound();                                                  // capture HP for Rewind
   promptParty();
 }
 
@@ -1016,7 +1169,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:1));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:1)));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (Team ${S.team})</button>`
     +`<button onclick="newGame(${next})">Switch to Team ${next}</button>`;
@@ -1047,6 +1200,9 @@ function unitCard(u){
     if(u.st.suppressed)chips.push(chip("rooted",`⛓ Suppressed ${u.st.suppressed}`,"Suppressed — entombed; can't act at all."));
     if(u.st.sickness)chips.push(chip("fire",`☢ Sickness ${u.st.sickness}`,`Radiation Sickness — takes ${u.st.sickness} damage each round (its stack count). Keeps building all fight; doesn't fade on its own (cleanse to clear).`));
     if(u.st.poison)chips.push(chip("bleed",`☠ Poison ${u.st.poison}`,"Poison — takes 2 damage each round."));
+    if(u.st.confused)chips.push(chip("taunt",`🌀 Confused ${u.st.confused}`,"Confused — on its turn it attacks its own side (or itself) instead of you."));
+    if(u.st.leeching)chips.push(chip("bleed",`🦟 Leeching ${u.st.leeching}`,"Leeching — takes 2 each round and heals the Siphon for 2."));
+    if(u.extraActs>0)chips.push(chip("stoked",`⏩ Hasted ${u.extraActs}`,`Hasted — has ${u.extraActs} extra action(s) this turn.`));
     if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −1 to this unit's attack rolls."));
     if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
     if(u.st.thorns)  chips.push(chip("regen",`❧ Thorns ${u.st.thorns}`,"Thorns — anyone who hits this unit takes 2 damage back."));
@@ -1106,19 +1262,24 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
         : pt==="barrage" ? "Choose a band to spray with chi (hits every enemy there):"
         : pt==="tarpit" ? "Choose a band to flood with tar (mires everyone there):"
         : pt==="irradiate" ? "Choose a band to irradiate (stacks Sickness on everyone there):"
+        : pt==="mirrors" ? "Choose a band to fill with mirrors (Confuses everyone there):"
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
     } else if(pt==="summon" && S.pending.weaponPick){
       hint.textContent="Forge a weapon to strike with:";
       acts.innerHTML=["Flameblade","Maul","Chain","Glaive"].map(w=>`<button onclick="pickWeapon('${w}')">${w}</button>`).join("")
+        +`<button class="ghost" onclick="cancel()">cancel</button>`;
+    } else if(pt==="aim" && S.pending.gunPick){
+      hint.textContent="Pick a gun (Rifle = big single, Shotgun = heavy + knockback, SMG = spray):";
+      acts.innerHTML=["Pistol","Rifle","Shotgun","SMG"].map(g=>`<button onclick="pickGun('${g}')">${g}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
     } else if(pt==="prank" && S.pending.gagPick){
       hint.textContent="Pick a gag:";
@@ -1155,6 +1316,15 @@ function render(){
         : pt==="salve" ? "Click an ally to heal + seal their wounds."
         : pt==="honeyguard" ? "Click an ally to shield with honey."
         : pt==="flow" ? "Click an enemy at Engaged or Near for a Flowing Strike."
+        : pt==="vertigo" ? "Click any enemy to Confuse (it'll attack its own side)."
+        : pt==="drain" ? "Click any enemy to Drain (damage + heal yourself)."
+        : pt==="leech" ? "Click any enemy to attach a Leech."
+        : pt==="enfeeble" ? "Click any enemy to Enfeeble (Shred + drain)."
+        : pt==="focus" ? "Click any enemy to Focus a hard beam on."
+        : pt==="haste" ? "Click an ally to give an extra action."
+        : pt==="rewind" ? "Click an ally to rewind their wounds."
+        : pt==="stasis" ? "Click an ally to freeze out of time (cleanse + shield)."
+        : pt==="aim" ? `Click any enemy to fire the ${S.pending.gun}.`
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -1249,6 +1419,30 @@ function render(){
     b.push(btn("Quicksilver Slip (+Dodge)",`quicksilverSlip(U('${a.id}'))`,false,TIPS.slip));
     b.push(btn("Globsplit",`globsplit(U('${a.id}'))`,false,TIPS.globsplit));
     b.push(btn("★ Argent Rush",`sigArgentRush(U('${a.id}'))`, a.sigDone, TIPS.argentRush));
+  } else if(a.role==="Confuse"){
+    b.push(btn("Vertigo (confuse)","arm('vertigo')",false,TIPS.vertigo));
+    b.push(btn("Hall of Mirrors (zone)","arm('mirrors')",false,TIPS.mirrors));
+    b.push(btn("Blur (+Dodge)",`blur(U('${a.id}'))`,false,TIPS.blur));
+    b.push(btn("★ Bedlam",`sigBedlam(U('${a.id}'))`, a.sigDone, TIPS.bedlam));
+  } else if(a.role==="Siphon"){
+    b.push(btn("Drain","arm('drain')",false,TIPS.drain));
+    b.push(btn("Leech","arm('leech')",false,TIPS.leech));
+    b.push(btn("Enfeeble","arm('enfeeble')",false,TIPS.enfeeble));
+    b.push(btn("★ Exsanguinate",`sigExsanguinate(U('${a.id}'))`, a.sigDone, TIPS.exsanguinate));
+  } else if(a.role==="Prism"){
+    b.push(btn("Focus (1 hard)","arm('focus')",false,TIPS.focus));
+    b.push(btn("Split (3 medium)",`split(U('${a.id}'))`,false,TIPS.split));
+    b.push(btn("Scatter (all low)",`scatter(U('${a.id}'))`,false,TIPS.scatter));
+    b.push(btn("★ White Light",`sigWhiteLight(U('${a.id}'))`, a.sigDone, TIPS.whiteLight));
+  } else if(a.role==="Time"){
+    b.push(btn("Haste (extra action)","arm('haste')",false,TIPS.haste));
+    b.push(btn("Rewind","arm('rewind')",false,TIPS.rewind));
+    b.push(btn("Stasis","arm('stasis')",false,TIPS.stasis));
+    b.push(btn("★ Overclock",`sigOverclock(U('${a.id}'))`, a.sigDone, TIPS.overclock));
+  } else if(a.role==="Gun"){
+    b.push(btn("Take Aim","arm('aim')",false,TIPS.aim));
+    b.push(btn("Combat Roll (+Dodge)",`combatRoll(U('${a.id}'))`,false,TIPS.roll));
+    b.push(btn("★ Hail of Lead",`sigHailOfLead(U('${a.id}'))`, a.sigDone, TIPS.hail));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -1291,6 +1485,16 @@ function render(){
     ? "Honey: Salve heals AND seals wounds (clears DoTs); Honeyguard shields; Honeycomb heals the squad. Golden Flood does it all + mires foes."
     : a.role==="Quick"
     ? "Quicksilver: Flowing Strike Poisons on a clean hit, Slip for a Dodge, Globsplit to hit two. Fast and slippery."
+    : a.role==="Confuse"
+    ? "Mirage (anti-taunt): Confuse foes (Vertigo / Hall of Mirrors) and they attack their OWN side. Blur for Dodge. Bedlam confuses everyone."
+    : a.role==="Siphon"
+    ? "Siphon: every tool damages AND heals you — Drain (slow), Leech (drain-over-time), Enfeeble (shred). Exsanguinate heals the whole squad."
+    : a.role==="Prism"
+    ? "Prism: Focus one enemy hard, Split across three, or Scatter all for chip. Read the board. Squishy — stay back."
+    : a.role==="Time"
+    ? "Chrona: Haste gives an ally an EXTRA action; Rewind un-takes the damage they took this round; Stasis cleanses + shields. Overclock = a free turn for everyone."
+    : a.role==="Gun"
+    ? "Deadeye: Take Aim and pick your gun (Pistol/Rifle/Shotgun/SMG). Combat Roll for mobility + Dodge. Squishy — hit hard, don't get hit."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -1366,6 +1570,26 @@ const TIPS = {
   slip:"Quicksilver Slip — turn to liquid: gain a Dodge (negate the next instance of damage).",
   globsplit:"Globsplit — split into two globs and strike two random enemies.",
   argentRush:"★ Argent Rush (once/expedition) — flow through the whole line: damage + Poison every enemy.",
+  // Team 5
+  vertigo:"Vertigo — Confuse one enemy: next turn it attacks its own side instead of you.",
+  mirrors:"Hall of Mirrors — Confuse every enemy in a band (they turn on their own).",
+  blur:"Blur — become an illusion: +2 Dodge (negate the next 2 instances of damage).",
+  bedlam:"★ Bedlam (once/expedition) — Confuse the ENTIRE warband: everyone attacks each other for a round.",
+  drain:"Drain — damage + Slow a foe, and heal yourself for part of it.",
+  leech:"Leech — attach a Leeching DoT: each round it drains the enemy and heals the Siphon.",
+  enfeeble:"Enfeeble — Shred a foe (it takes more from everyone) + drain a little life.",
+  exsanguinate:"★ Exsanguinate (once/expedition) — drain EVERY enemy and heal the whole squad.",
+  focus:"Focus — concentrate the beam into one enemy, hard.",
+  split:"Split — three medium bolts at random enemies.",
+  scatter:"Scatter — a light spray that hits every enemy.",
+  whiteLight:"★ White Light (once/expedition) — the full spectrum at once: heavy damage to every enemy.",
+  haste:"Haste — give an ally an EXTRA action this turn.",
+  rewind:"Rewind — un-take the damage an ally suffered this round (restore their round-start HP).",
+  stasis:"Stasis — freeze an ally out of time: cleanse their debuffs + make them untouchable (Dodge 3).",
+  overclock:"★ Overclock (once/expedition) — the whole squad gets an extra action.",
+  aim:"Take Aim — pick a gun: Pistol (quick), Rifle (big single), Shotgun (heavy + knockback), SMG (a spray of three).",
+  roll:"Combat Roll — reposition freely + gain a Dodge. Stay alive (you're squishy).",
+  hail:"★ Hail of Lead (once/expedition) — empty every chamber: heavy damage across the whole enemy line.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -1421,6 +1645,16 @@ function arm(kind){
   if(kind==="salve")    S.pending={type:"salve",actor:a.id,targets:"ally"};
   if(kind==="honeyguard")S.pending={type:"honeyguard",actor:a.id,targets:"ally"};
   if(kind==="flow")     S.pending={type:"flow",actor:a.id,targets:"enemy"};
+  if(kind==="vertigo")  S.pending={type:"vertigo",actor:a.id,targets:"enemy"};
+  if(kind==="mirrors")  S.pending={type:"mirrors",actor:a.id};
+  if(kind==="drain")    S.pending={type:"drain",actor:a.id,targets:"enemy"};
+  if(kind==="leech")    S.pending={type:"leech",actor:a.id,targets:"enemy"};
+  if(kind==="enfeeble") S.pending={type:"enfeeble",actor:a.id,targets:"enemy"};
+  if(kind==="focus")    S.pending={type:"focus",actor:a.id,targets:"enemy"};
+  if(kind==="haste")    S.pending={type:"haste",actor:a.id,targets:"ally"};
+  if(kind==="rewind")   S.pending={type:"rewind",actor:a.id,targets:"ally"};
+  if(kind==="stasis")   S.pending={type:"stasis",actor:a.id,targets:"ally"};
+  if(kind==="aim")      S.pending={type:"aim",actor:a.id,gunPick:true};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -1433,7 +1667,11 @@ function pickBand(i){
   else if(t==="barrage") chiBarrage(a,i);
   else if(t==="tarpit") tarPit(a,i);
   else if(t==="irradiate") irradiate(a,i);
+  else if(t==="mirrors") hallOfMirrors(a,i);
 }
+function pickGun(g){ if(!S.pending) return; const a=U(S.pending.actor);
+  if(g==="SMG"){ S.pending.gun="SMG"; takeAim(a,null); return; }   // SMG needs no target
+  S.pending.gun=g; S.pending.gunPick=false; S.pending.targets="enemy"; render(); }
 function pickWeapon(w){ if(!S.pending) return; S.pending.weapon=w; S.pending.weaponPick=false; S.pending.targets="enemy"; render(); }
 function pickGag(g){ if(!S.pending) return; S.pending.gag=g; S.pending.gagPick=false; S.pending.targets="enemy"; render(); }
 function pickStrain(s){ if(!S.pending) return; S.pending.strain=s; S.pending.strainPick=false; S.pending.targets="ally"; render(); }
@@ -1465,6 +1703,15 @@ function pick(arg){
   if(type==="salve"){ salve(a,target); return; }
   if(type==="honeyguard"){ honeyguard(a,target); return; }
   if(type==="flow"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Flowing Strike hits Engaged or Near."; return; } flowingStrike(a,target); return; }
+  if(type==="vertigo"){ vertigo(a,target); return; }
+  if(type==="drain"){ drain(a,target); return; }
+  if(type==="leech"){ leech(a,target); return; }
+  if(type==="enfeeble"){ enfeeble(a,target); return; }
+  if(type==="focus"){ focus(a,target); return; }
+  if(type==="haste"){ haste(a,target); return; }
+  if(type==="rewind"){ rewind(a,target); return; }
+  if(type==="stasis"){ stasis(a,target); return; }
+  if(type==="aim"){ takeAim(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
