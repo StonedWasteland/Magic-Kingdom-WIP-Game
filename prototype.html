@@ -115,6 +115,33 @@ const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 let S;
 let customPicks=null, build=null, buildPool=null;          // squad builder state
 const ROLES=["Tank","Controller","Artillery","Support","Striker"];
+const HERO_DESC={
+  steele:"Armors up and taunts — soaks hits behind metal. Weak to lightning.",
+  mason:"Roots enemies in cement and walls off the field.",
+  ember:"Fire & Burning; sets whole bands ablaze.",
+  wren:"Heal-over-time and revives the fallen. (Fire stops her healing.)",
+  atlas:"Knockback — hurls enemies around the bands (into a fire, off your line).",
+  cairn:"A gravity well that drags the whole warband in and crushes them.",
+  bryony:"Entangling vines that spread across bands and hold enemies fast.",
+  vitra:"Shred — makes enemies take more from everything; lays a glasstorm.",
+  sol:"Barriers (preventive shields) + Unmake (purge an ally's tags & heal).",
+  brand:"Conjures weapons on demand — fire / crush / entangle / pierce.",
+  gloop:"Regenerates + taunts — but can't regen on any round it gets hit.",
+  puck:"Pranks that hit AND debilitate — banana/pie/laces (slow/blind/root).",
+  kai:"Fast multi-hit chi; weak single shots, huge all-bands signature.",
+  hazey:"Strains: Indica (heal) / Sativa (shield+dodge) / Purple Haze (cleanse).",
+  hops:"Dodge stacks (guaranteed misses) + drunken blows that blind.",
+  marrow:"Heals whenever ANY unit dies; devours corpses to mend.",
+  brea:"Tar that roots, mires whole bands, and entombs foes (can't act).",
+  gray:"Radiation Sickness — a DoT that COMPOUNDS the whole fight.",
+  mel:"Heals and seals wounds (clears DoTs); sticky honey shields.",
+  mercer:"Fast & slippery — Poisons, gains Dodge, splits to hit two.",
+  mirage:"Anti-taunt: Confuses enemies so they attack their OWN side.",
+  siphon:"Lifesteal — every drain & curse heals the Siphon.",
+  prism:"Choose your shot: Focus 1 hard / Split 3 medium / Scatter all.",
+  chrona:"Time: grants EXTRA actions (Haste) and rewinds damage taken.",
+  deadeye:"A gun arsenal (pistol/rifle/shotgun/SMG) — high ranged burst, squishy.",
+};
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
   { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false, stance:false },
@@ -173,7 +200,7 @@ function renderBuilder(){
   ROLES.forEach((role,i)=>{
     html+=`<div style="margin-bottom:10px"><div style="color:var(--dim);font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">${role}</div><div class="acts">`;
     buildPool[i].forEach((u,j)=>{ const sel=build[i]&&build[i].id===u.id;
-      html+=`<button class="${sel?"primary":""}" onclick="pickHero(${i},${j})">${u.name} <small style="opacity:.55">· ${u.role}</small></button>`; });
+      html+=`<button class="${sel?"primary":""}" title="${u.name} (${u.role}) — ${HERO_DESC[u.id]||""}" onclick="pickHero(${i},${j})">${u.name} <small style="opacity:.55">· ${u.role}</small></button>`; });
     html+=`</div></div>`;
   });
   const ready=build.every(x=>x);
