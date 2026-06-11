@@ -76,7 +76,7 @@
 <div class="sub">2d6 · 10+ full / 7–9 partial / 6− fail · lock it, then burn it · prove the tags talk.</div>
 
 <div class="topbar">
-  <div class="doom">DOOM <b id="doom">8</b> &nbsp;<span class="pip" id="doompips"></span></div>
+  <div class="doom">DOOM <b id="doom">10</b> &nbsp;<span class="pip" id="doompips"></span></div>
   <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
   <div class="doom">TEAM <b id="teamlabel" style="color:var(--ink)">1</b></div>
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
@@ -170,7 +170,7 @@ function introLine(team){
 }
 function baseState(team,mode){
   return { team:team, mode:mode, expFight:1, expTotal: mode==="expedition"?3:1,
-    round:1, doom:8, phase:"party", pending:null, over:null, push:false,
+    round:1, doom:10, phase:"party", pending:null, over:null, push:false,
     fire:[0,0,0], grown:[0,0,0], glass:[0,0,0], well:-1,   // zone state per band; well = band index or -1
     units: freshParty(team).concat(foes(1)) };
 }
@@ -198,7 +198,7 @@ function nextFight(){                                        // interlude → ne
     // sigDone is NOT reset — Signatures are once per EXPEDITION, not per fight.
   });
   S.expFight++;
-  S.round=1; S.doom=8; S.phase="party"; S.pending=null; S.over=null; S.push=false;
+  S.round=1; S.doom=10; S.phase="party"; S.pending=null; S.over=null; S.push=false;
   S.fire=[0,0,0]; S.grown=[0,0,0]; S.glass=[0,0,0]; S.well=-1;
   S.units = p.concat(foes(S.expFight));
   log(`— Fight ${S.expFight} of ${S.expTotal} — ${S.expFight===S.expTotal?"the WARLORD leads the final assault!":"a larger warband closes in."} —`,"l-round");
@@ -677,26 +677,26 @@ function tarGlob(actor,target){          // Tar: root one foe + chip
   const p=S.push; S.push=false; spend(actor,p?2:1);
   const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
   if(t==="fail"){ log(`  ${actor.name}'s tar misses ${target.name}.`,"l-miss"); }
-  else { damage(target, t==="full"?3:2,"Tar"); setSt(target,"rooted",2); log(`  ${target.name} takes ${t==="full"?3:2} + Rooted in tar.`,"l-root"); }
+  else { damage(target, t==="full"?4:3,"Tar"); setSt(target,"rooted",2); log(`  ${target.name} takes ${t==="full"?4:3} + Rooted in tar.`,"l-root"); }
   finishAction(actor);
 }
-function tarPit(actor,band){             // Tar: mire a whole band — Slow + Root
+function tarPit(actor,band){             // Tar: mire a whole band — chip + Slow + Root
   spend(actor,1);
   const hit=liveEnemies().filter(e=>e.band===band);
-  hit.forEach(e=>{ setSt(e,"slowed",2); setSt(e,"rooted",1); });
-  log(`${actor.name} floods ${BANDS[band]} with tar — ${hit.length?`${hit.length} foe(s) mired (Slowed + Rooted)`:"but it's empty"}.`,"l-root");
+  hit.forEach(e=>{ damage(e,2,"tar"); setSt(e,"slowed",2); setSt(e,"rooted",1); });
+  log(`${actor.name} floods ${BANDS[band]} with tar — ${hit.length?`${hit.length} foe(s) take 2, mired (Slowed + Rooted)`:"but it's empty"}.`,"l-root");
   finishAction(actor);
 }
-function smother(actor,target){          // Tar: entomb one foe — Suppressed + Blinded
+function smother(actor,target){          // Tar: entomb one foe — chip + Suppressed + Blinded
   spend(actor,1);
-  setSt(target,"suppressed",2); setSt(target,"blinded",2);
-  log(`${actor.name} smothers ${target.name} in tar — Suppressed (can't act) + Blinded.`,"l-root");
+  damage(target,2,"tar"); setSt(target,"suppressed",2); setSt(target,"blinded",2);
+  log(`${actor.name} smothers ${target.name} in tar — 2 + Suppressed (can't act) + Blinded.`,"l-root");
   finishAction(actor);
 }
 function sigThePit(actor){               // Tar signature: the whole field becomes a tar pit
   spend(actor,4); actor.sigDone=true;
   log(`${actor.name} opens THE PIT — the warband sinks into tar:`,"l-root");
-  liveEnemies().forEach(e=>{ damage(e,3,"the tar pit"); setSt(e,"rooted",2); setSt(e,"slowed",3); log(`  ${e.name} takes 3 + Rooted + Slowed.`,"l-part"); });
+  liveEnemies().forEach(e=>{ damage(e,4,"the tar pit"); setSt(e,"rooted",2); setSt(e,"slowed",3); log(`  ${e.name} takes 4 + Rooted + Slowed.`,"l-part"); });
   finishAction(actor);
 }
 function irradiate(actor,band){          // Rad: stack Sickness on a whole band
@@ -987,8 +987,8 @@ function endOfRound(){
   S.glass=S.glass.map(n=>Math.max(0,n-1));
   S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
   S.units.forEach(u=>{ u._hit=false; });                                        // reset per-round "was hit" (Gloop regen)
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","sickness","poison"].forEach(k=>{
-    if(u.st[k]) u.st[k]--; }); });
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison"].forEach(k=>{
+    if(u.st[k]) u.st[k]--; }); });   // NOTE: Sickness is NOT here — it compounds all fight (cleanse to clear)
 
   // win/lose
   if(!liveEnemies().length){ return finish("win"); }
@@ -1045,7 +1045,7 @@ function unitCard(u){
     if(u.st.heavy)   chips.push(chip("rooted",`⬇ Heavy ${u.st.heavy}`,"Heavy — pinned by gravity; can't advance."));
     if(u.st.entangled)chips.push(chip("rooted",`🌿 Entangled ${u.st.entangled}`,"Entangled — gripped by vines; can't move."));
     if(u.st.suppressed)chips.push(chip("rooted",`⛓ Suppressed ${u.st.suppressed}`,"Suppressed — entombed; can't act at all."));
-    if(u.st.sickness)chips.push(chip("fire",`☢ Sickness ${u.st.sickness}`,`Radiation Sickness — takes ${u.st.sickness} damage each round (its stack count). Decays 1/round.`));
+    if(u.st.sickness)chips.push(chip("fire",`☢ Sickness ${u.st.sickness}`,`Radiation Sickness — takes ${u.st.sickness} damage each round (its stack count). Keeps building all fight; doesn't fade on its own (cleanse to clear).`));
     if(u.st.poison)chips.push(chip("bleed",`☠ Poison ${u.st.poison}`,"Poison — takes 2 damage each round."));
     if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −1 to this unit's attack rolls."));
     if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
