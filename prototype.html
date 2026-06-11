@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:1)))))))" title="Cycle to the next squad (1 → … → 8)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:1)))))))))" title="Cycle to the next squad (1 → … → 10)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -156,6 +156,16 @@ const HERO_DESC={
   surge:"Lightning — big single bolt that stuns + chains across a whole band. No DoT.",
   oracle:"Telepath support — heal + cleanse, shield/Dodge buffs, and Confuses one foe.",
   comet:"Flying striker — Dive Bomb (knockback) + Heat Vision beam; hits from anywhere.",
+  vesper:"Vampire tank — Taunts and drinks the damage back (Bite lifesteal). Mist for Dodge.",
+  hex:"Hexcraft — Curse of Doom (delayed detonation) + Evil Eye (Blind + Slow a band).",
+  grimm:"Hellfire artillery — Shadowbolts that ignore Barrier + a burning band (Hellfire).",
+  requiem:"Necromancer — drains foes to heal, revives the fallen, wards with bone.",
+  reaper:"Reaper striker — Bleeds, then Harvests (executes) wounded foes outright.",
+  boom:"Drummer tank — Taunt + Crash (Stagger the front) + Backbeat shield.",
+  bass:"Bass controller — locks foes to the groove (Root/Slow) and drops Confusion on a band.",
+  riff:"Lead-guitar artillery — Power Chords that stun + a solo that literally Shreds a band.",
+  keys:"Keyboard support — Sustain (regen), Ballad (big heal+cleanse), Anthem (squad buff).",
+  wail:"Vocalist striker — in-your-face Mic Drops, a 3-hit belt, and crowd-surf mobility.",
 };
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
@@ -214,16 +224,30 @@ function team8(){ return [
   { id:"oracle",   name:"Oracle",    role:"Mind",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"comet",    name:"Comet",     role:"Fly",     side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team9(){ return [   // Nightfall — gothic
+  { id:"vesper",   name:"Vesper",    role:"Vamp",    side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"hex",      name:"Hex",       role:"Witch",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"grimm",    name:"Grimm",     role:"Hell",    side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"requiem",  name:"Requiem",   role:"Necro",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"reaper",   name:"Reaper",    role:"Reaper",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
+function team10(){ return [   // the Band — music & fun
+  { id:"boom",     name:"Boom",      role:"Drum",    side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"bass",     name:"Bass",      role:"Bass",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"riff",     name:"Riff",      role:"Sonic",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"keys",     name:"Keys",      role:"Keys",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"wail",     name:"Wail",      role:"Vocal",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -270,7 +294,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -1387,6 +1411,239 @@ function sigMeteorDive(actor,target){     // Fly sig: a meteoric dive onto one f
   finishAction(actor);
 }
 
+/* ─── Team 9 actions (Nightfall — gothic) ─────────────────────────────────── */
+function bite(actor,target){              // Vamp: lifesteal melee
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s fangs find nothing.`,"l-miss"); }
+  else { const d=t==="full"?5:3; if(damage(target,d,"Bite")){ const h=Math.ceil(d/2), b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+h); log(`  ${target.name} takes ${d}; ${actor.name} drinks deep (+${actor.hp-b}).`,"l-hit"); } }
+  finishAction(actor);
+}
+function mistForm(actor){                 // Vamp: incorporeal — Dodge + reposition
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} dissolves into mist — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigCrimsonFeast(actor){          // Vamp sig: drain the whole field, heal big
+  spend(actor,4); actor.sigDone=true;
+  let drained=0;
+  liveEnemies().forEach(e=>{ if(damage(e,5,"the Crimson Feast")){ drained++; log(`  ${e.name} takes 5.`,"l-part"); } });
+  const h=4+drained*2, b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+h);
+  log(`${actor.name} gorges in a CRIMSON FEAST — heals ${actor.hp-b}.`,"l-hit");
+  finishAction(actor);
+}
+function curseDoom(actor,target){         // Witch: mark a foe — detonates after 2 rounds
+  spend(actor,1);
+  setSt(target,"doom",2);
+  log(`${actor.name} lays a CURSE OF DOOM on ${target.name} — it detonates in 2 rounds (8 damage). Tick-tock.`,"l-root");
+  finishAction(actor);
+}
+function evilEye(actor,band){             // Witch: hex a whole band — Blind + Slow
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"the Evil Eye"); setSt(e,"blinded",2); setSt(e,"slowed",2); });
+  log(`${actor.name} turns the Evil Eye on ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 2 + Blinded + Slowed`:"empty air"}.`,"l-root");
+  finishAction(actor);
+}
+function sigBlackSabbath(actor){          // Witch sig: curse the field
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} convenes a BLACK SABBATH — the warband is hexed:`,"l-bad");
+  liveEnemies().forEach(e=>{ damage(e,3,"the Sabbath"); setSt(e,"blinded",2); e.st.shred=Math.min(6,(e.st.shred||0)+2); log(`  ${e.name} takes 3 + Blinded + Shred ${e.st.shred}.`,"l-part"); });
+  finishAction(actor);
+}
+function shadowbolt(actor,target){        // Hell: dark ranged, ignores Barrier
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s shadowbolt gutters out.`,"l-miss"); }
+  else { damage(target, t==="full"?5:3,"Shadow",true); log(`  ${target.name} takes ${t==="full"?5:3} Shadow (ignores Barrier).`,t==="full"?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function hellfire(actor,band){            // Hell: shadowflame across a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,3,"Hellfire"); setSt(e,"burning",2); });
+  log(`${actor.name} rains Hellfire on ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 3 + Burning`:"nothing to burn"}.`,"l-fire");
+  finishAction(actor);
+}
+function sigDamnation(actor){             // Hell sig: damn them all
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} pronounces DAMNATION — shadowflame swallows the field:`,"l-bad");
+  liveEnemies().forEach(e=>{ damage(e,5,"Damnation",true); setSt(e,"burning",2); log(`  ${e.name} takes 5 (ignores Barrier) + Burning.`,"l-part"); });
+  finishAction(actor);
+}
+function siphonLife(actor,target){        // Necro: drain a foe to heal the most-wounded ally
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s siphon misses ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  const d=t==="full"?4:3; damage(target,d,"Siphon Life");
+  const ally=liveParty().filter(u=>u!==actor).sort((a,b)=>(a.hp/a.max)-(b.hp/b.max))[0] || actor;
+  const bf=ally.hp; ally.hp=Math.min(ally.max,ally.hp+d);
+  log(`  ${target.name} takes ${d}; the stolen life flows into ${ally.name} (+${ally.hp-bf}).`,"l-hit");
+  finishAction(actor);
+}
+function raiseDead(actor,target){         // Necro: revive a fallen ally, or regen a living one
+  spend(actor,2);
+  if(!alive(target)){ target.hp=8; target.st.down=false; log(`${actor.name} drags ${target.name} back from death — RAISED at 8 HP.`,"l-hit"); }
+  else { setSt(target,"regen",3); log(`${actor.name} pours dark vigor into ${target.name} — Regenerating (3/round).`,"l-hit"); }
+  finishAction(actor);
+}
+function boneWard(actor,target){          // Necro: a shield of bone
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+5;
+  log(`${actor.name} raises a Bone Ward around ${target.name} — Barrier ${target.barrier}.`,"l-hit");
+  finishAction(actor);
+}
+function sigMassResurrection(actor){      // Necro sig: raise all, heal the living
+  spend(actor,4); actor.sigDone=true;
+  party().forEach(u=>{ if(!alive(u)){ u.hp=10; u.st.down=false; log(`  ${u.name} rises — RESURRECTED (10 HP).`,"l-hit"); } else { u.hp=Math.min(u.max,u.hp+5); } });
+  log(`${actor.name} calls a MASS RESURRECTION — the fallen rise and the living are mended.`,"l-hit");
+  finishAction(actor);
+}
+function scythe(actor,target){            // Reaper: melee + Bleed
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  The scythe whistles past ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?4:3,"Slashing"); setSt(target,"bleeding",2); log(`  ${target.name} takes ${t==="full"?4:3} + Bleeding.`,t==="full"?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function harvest(actor,target){           // Reaper: EXECUTE — reaps the wounded outright
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} evades the reaping.`,"l-miss"); finishAction(actor); return; }
+  const thresh=Math.ceil(target.max*0.35);
+  if(!target.ctrlImmune && target.hp<=thresh){ damage(target,999,"the Harvest",true); log(`  ${actor.name} HARVESTS ${target.name} — the wounded soul is reaped! ☠`,"l-bad"); }
+  else { const d=t==="full"?5:3; damage(target,d,"the Scythe"); log(`  ${target.name} takes ${d}${target.hp<=thresh+4?" — nearly ripe for the Harvest":""}.`,t==="full"?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function reaperPhase(actor){              // Reaper: phase — Dodge + reposition
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} phases through the veil — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigDeathsDoor(actor){            // Reaper sig: reap the field
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} throws open DEATH'S DOOR:`,"l-bad");
+  liveEnemies().forEach(e=>{ const thresh=Math.ceil(e.max*0.4);
+    if(!e.ctrlImmune && e.hp<=thresh){ damage(e,999,"Death's Door",true); log(`  ${e.name} is reaped where it stands! ☠`,"l-bad"); }
+    else { damage(e,5,"Death's Door"); setSt(e,"bleeding",2); log(`  ${e.name} takes 5 + Bleeding.`,"l-part"); } });
+  finishAction(actor);
+}
+
+/* ─── Team 10 actions (the Band — music & fun) ────────────────────────────── */
+function crash(actor){                    // Drum: cymbal crash — Stagger the front
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===actor.band);
+  hit.forEach(e=>{ damage(e,2,"the Crash"); setSt(e,"stagger",1); });
+  log(`${actor.name} hits a thunderous CRASH at ${BANDS[actor.band]} — ${hit.length?`${hit.length} foe(s) take 2 + Staggered`:"but no one's in range"}.`,"l-hit");
+  finishAction(actor);
+}
+function backbeat(actor){                 // Drum: steady the rhythm — self-Barrier
+  spend(actor,1);
+  actor.barrier=(actor.barrier||0)+7;
+  log(`${actor.name} locks into the backbeat — Barrier ${actor.barrier}.`,"l-hit");
+  finishAction(actor);
+}
+function sigWallOfSound(actor){           // Drum sig: a wall of sound
+  spend(actor,4); actor.sigDone=true;
+  actor.barrier=(actor.barrier||0)+12; setSt(actor,"taunting",3);
+  log(`${actor.name} drops a WALL OF SOUND — Barrier 12, Taunting, the bass rattles every bone:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,3,"the Wall of Sound"); setSt(e,"stagger",1); log(`  ${e.name} takes 3 + Staggered.`,"l-part"); });
+  finishAction(actor);
+}
+function lockGroove(actor,target){        // Bass: lock a foe to the rhythm — Root + Slow
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} slips the groove.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"the Bassline"); setSt(target,"rooted",2); setSt(target,"slowed",2); log(`  ${target.name} takes ${t==="full"?3:2} — locked to the groove (Rooted + Slowed).`,"l-root"); }
+  finishAction(actor);
+}
+function bassDrop(actor,band){            // Bass: the drop — Slow + Confuse a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"the Drop"); setSt(e,"slowed",2); setSt(e,"confused",1); });
+  log(`${actor.name} drops the bass on ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 2 + Slowed + Confused`:"a wasted drop"}.`,"l-root");
+  finishAction(actor);
+}
+function sigDropTheBass(actor){           // Bass sig: subsonic — the whole field convulses
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} cranks the sub and DROPS THE BASS — the field convulses:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,3,"Subsonic"); setSt(e,"slowed",2); setSt(e,"confused",1); log(`  ${e.name} takes 3 + Slowed + Confused.`,"l-part"); });
+  finishAction(actor);
+}
+function powerChord(actor,target){        // Sonic: big single + Stagger
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s chord clips ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,5,"a Power Chord"); log(`  ${target.name} takes 5.`,"l-part"); }
+  else { damage(target,7,"a Power Chord"); setSt(target,"stagger",1); log(`  ${target.name} takes 7 — STUNNED (Staggered).`,"l-hit"); }
+  finishAction(actor);
+}
+function shredSolo(actor,band){           // Sonic: a solo that literally Shreds a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,3,"a shredding solo"); e.st.shred=Math.min(6,(e.st.shred||0)+2); });
+  log(`${actor.name} rips a face-shredding SOLO across ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 3 + Shred`:"to an empty pit"}.`,"l-hit");
+  finishAction(actor);
+}
+function sigFaceMelter(actor){            // Sonic sig: melt every face
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} unleashes the FACE MELTER:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"the Face Melter"); e.st.shred=Math.min(6,(e.st.shred||0)+2); setSt(e,"stagger",1); log(`  ${e.name} takes 5 + Shred + Staggered.`,"l-part"); });
+  finishAction(actor);
+}
+function sustain(actor,target){           // Keys: hold the note — Regen + a little heal
+  spend(actor,1);
+  setSt(target,"regen",3); const b=target.hp; target.hp=Math.min(target.max,target.hp+2);
+  log(`${actor.name} holds a sustaining chord for ${target.name} — Regenerating (3/round)${target.hp>b?` +${target.hp-b}`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function ballad(actor,target){            // Keys: a slow ballad — big heal + cleanse
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+5);
+  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","confused","feared"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  log(`${actor.name} plays a tender ballad for ${target.name} — heals ${target.hp-b}${c?`, eases ${c} affliction(s)`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function anthem(actor){                   // Keys: an anthem — squad Barrier + Dodge
+  spend(actor,2);
+  party().filter(alive).forEach(u=>{ u.barrier=(u.barrier||0)+3; u.dodge=(u.dodge||0)+1; });
+  log(`${actor.name} strikes up an ANTHEM — the whole squad gets Barrier 3 + a Dodge.`,"l-hit");
+  finishAction(actor);
+}
+function sigCrescendo(actor){             // Keys sig: build to a crescendo
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+5); u.barrier=(u.barrier||0)+4; setSt(u,"regen",2); });
+  log(`${actor.name} builds to a soaring CRESCENDO — the squad heals 5, gains Barrier 4, and Regenerates.`,"l-hit");
+  finishAction(actor);
+}
+function micDrop(actor,target){           // Vocal: in-your-face — melee + Stagger
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} mistimes it on ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?5:3,"a Mic Drop"); if(t==="full") setSt(target,"stagger",1); log(`  ${target.name} takes ${t==="full"?5:3}${t==="full"?" — MIC DROP, Staggered":""}.`,t==="full"?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function beltIt(actor){                   // Vocal: a screaming run — 3 quick hits
+  spend(actor,1);
+  log(`${actor.name} belts out a screaming run — 3 hits:`,"l-part");
+  for(let i=0;i<3;i++){ const e=pickEnemy(); if(e){ damage(e,2,"a high note"); log(`  → ${e.name} takes 2.`,"l-part"); } }
+  finishAction(actor);
+}
+function crowdSurf(actor){                // Vocal: dive into the crowd — Dodge + reposition
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} dives off the stage and crowd-surfs — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigShowstopper(actor){           // Vocal sig: the showstopper
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} hits the SHOWSTOPPER — the whole crowd loses it:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"the Showstopper"); setSt(e,"stagger",1); log(`  ${e.name} takes 5 + Staggered.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -1549,6 +1806,9 @@ function endOfRound(){
     if(u.st.bleeding){ damage(u,2,"Bleeding"); log(`  ${u.name} bleeds for 2.`,"l-bad"); }
     if(u.st.sickness){ damage(u,u.st.sickness,"radiation sickness"); log(`  ${u.name} sickens for ${u.st.sickness} (stacks).`,"l-fire"); }
     if(u.st.poison){ damage(u,2,"poison"); log(`  ${u.name} suffers poison: 2.`,"l-part"); }
+    if(u.st.doom){ u.st.doom--;                          // Curse of Doom — counts down, then detonates
+      if(u.st.doom<=0){ u.st.doom=0; damage(u,8,"the Curse of Doom",true); log(`  ${u.name}'s CURSE OF DOOM detonates for 8! ☠`,"l-bad"); }
+      else log(`  ${u.name} is cursed — Doom detonates in ${u.st.doom}.`,"l-root"); }
     if(u.st.leeching){ damage(u,2,"the leech");        // Leeching: drains the enemy + heals the Siphon
       const s=S.units.find(x=>x.role==="Siphon"&&alive(x)); if(s){ s.hp=Math.min(s.max,s.hp+2); }
       log(`  ${u.name} is leeched for 2${s?` (Siphon drinks 2)`:""}.`,"l-bad"); }
@@ -1640,7 +1900,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:1))))));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:1))))))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -1672,6 +1932,7 @@ function unitCard(u){
     if(u.st.suppressed)chips.push(chip("rooted",`⛓ Suppressed ${u.st.suppressed}`,"Suppressed — entombed; can't act at all."));
     if(u.st.sickness)chips.push(chip("fire",`☢ Sickness ${u.st.sickness}`,`Radiation Sickness — takes ${u.st.sickness} damage each round (its stack count). Keeps building all fight; doesn't fade on its own (cleanse to clear).`));
     if(u.st.poison)chips.push(chip("bleed",`☠ Poison ${u.st.poison}`,"Poison — takes 2 damage each round."));
+    if(u.st.doom)chips.push(chip("rooted",`☠ Doom ${u.st.doom}`,`Curse of Doom — detonates for 8 damage (ignores Barrier) when the countdown hits 0, in ${u.st.doom} round(s).`));
     if(u.st.confused)chips.push(chip("taunt",`🌀 Confused ${u.st.confused}`,"Confused — on its turn it attacks its own side (or itself) instead of you."));
     if(u.st.leeching)chips.push(chip("bleed",`🦟 Leeching ${u.st.leeching}`,"Leeching — takes 2 each round and heals the Siphon for 2."));
     if(u.extraActs>0)chips.push(chip("stoked",`⏩ Hasted ${u.extraActs}`,`Hasted — has ${u.extraActs} extra action(s) this turn.`));
@@ -1737,7 +1998,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -1751,6 +2012,10 @@ function render(){
         : pt==="flourBomb" ? "Choose a band to flour-bomb (damage + Blind everyone there):"
         : pt==="icewall" ? "Choose a band to wall off in ice (damage + Root + Slow everyone there):"
         : pt==="chain" ? "Choose a band to arc chain lightning through (hits every enemy there):"
+        : pt==="evileye" ? "Choose a band to hex with the Evil Eye (Blind + Slow everyone there):"
+        : pt==="hellfire" ? "Choose a band to rain Hellfire on (Burn everyone there):"
+        : pt==="bassdrop" ? "Choose a band to drop the bass on (Slow + Confuse everyone there):"
+        : pt==="shredsolo" ? "Choose a band to shred with a solo (damage + Shred everyone there):"
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -1837,6 +2102,19 @@ function render(){
         : pt==="dive" ? "Click any enemy to Dive Bomb (knockback) — flying reaches any band."
         : pt==="heat" ? "Click any enemy to sear with Heat Vision."
         : pt==="meteor" ? "Click any enemy to drop a Meteor Dive on (splashes its band)."
+        : pt==="bite" ? "Click an enemy at Engaged or Near to Bite (lifesteal)."
+        : pt==="doom" ? "Click any enemy to lay a Curse of Doom on (detonates in 2 rounds)."
+        : pt==="shadowbolt" ? "Click any enemy to hit with a Shadowbolt (ignores Barrier)."
+        : pt==="siphonlife" ? "Click any enemy to Siphon Life from (heals your most-wounded ally)."
+        : pt==="raise" ? "Click a fallen ally to Raise, or a living ally for Regen."
+        : pt==="boneward" ? "Click an ally to shield with a Bone Ward."
+        : pt==="scythe" ? "Click an enemy at Engaged or Near to Scythe (Bleed)."
+        : pt==="harvest" ? "Click any enemy to Harvest — executes the wounded (under ~35% HP)."
+        : pt==="groove" ? "Click any enemy to Lock to the Groove (Root + Slow)."
+        : pt==="chord" ? "Click any enemy to hit with a Power Chord (stun)."
+        : pt==="sustain" ? "Click an ally to Sustain (Regen over time)."
+        : pt==="ballad" ? "Click an ally to play a Ballad (big heal + cleanse)."
+        : pt==="micdrop" ? "Click an enemy at Engaged or Near for a Mic Drop (Stagger)."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -2024,6 +2302,52 @@ function render(){
     b.push(btn("Heat Vision (beam)","arm('heat')",false,TIPS.heatVision));
     b.push(btn("Barrel Roll (+Dodge, move)",`takeFlight(U('${a.id}'))`,false,TIPS.takeFlight));
     b.push(btn("★ Meteor Dive","arm('meteor')", a.sigDone, TIPS.meteorDive));
+  } else if(a.role==="Vamp"){
+    b.push(btn("Taunt",`taunt(U('${a.id}'))`, a.st.taunting>0, TIPS.taunt));
+    b.push(btn("Bite (lifesteal)","arm('bite')",false,TIPS.bite));
+    b.push(btn("Mist Form (+Dodge, move)",`mistForm(U('${a.id}'))`,false,TIPS.mistForm));
+    b.push(btn("★ Crimson Feast",`sigCrimsonFeast(U('${a.id}'))`, a.sigDone, TIPS.crimsonFeast));
+  } else if(a.role==="Witch"){
+    b.push(btn("Curse of Doom","arm('doom')",false,TIPS.curseDoom));
+    b.push(btn("Evil Eye (blind band)","arm('evileye')",false,TIPS.evilEye));
+    b.push(btn("★ Black Sabbath",`sigBlackSabbath(U('${a.id}'))`, a.sigDone, TIPS.blackSabbath));
+  } else if(a.role==="Hell"){
+    b.push(btn("Shadowbolt (pierces shields)","arm('shadowbolt')",false,TIPS.shadowbolt));
+    b.push(btn("Hellfire (burn band)","arm('hellfire')",false,TIPS.hellfire));
+    b.push(btn("★ Damnation",`sigDamnation(U('${a.id}'))`, a.sigDone, TIPS.damnation));
+  } else if(a.role==="Necro"){
+    b.push(btn("Siphon Life (drain→heal)","arm('siphonlife')",false,TIPS.siphonLife));
+    b.push(btn("Raise Dead (revive)","arm('raise')",false,TIPS.raiseDead));
+    b.push(btn("Bone Ward (shield)","arm('boneward')",false,TIPS.boneWard));
+    b.push(btn("★ Mass Resurrection",`sigMassResurrection(U('${a.id}'))`, a.sigDone, TIPS.massRes));
+  } else if(a.role==="Reaper"){
+    b.push(btn("Scythe (bleed)","arm('scythe')",false,TIPS.scythe));
+    b.push(btn("Harvest (execute)","arm('harvest')",false,TIPS.harvest));
+    b.push(btn("Phase (+Dodge, move)",`reaperPhase(U('${a.id}'))`,false,TIPS.reaperPhase));
+    b.push(btn("★ Death's Door",`sigDeathsDoor(U('${a.id}'))`, a.sigDone, TIPS.deathsDoor));
+  } else if(a.role==="Drum"){
+    b.push(btn("Taunt",`taunt(U('${a.id}'))`, a.st.taunting>0, TIPS.taunt));
+    b.push(btn("Crash (stagger front)",`crash(U('${a.id}'))`,false,TIPS.crash));
+    b.push(btn("Backbeat (shield)",`backbeat(U('${a.id}'))`,false,TIPS.backbeat));
+    b.push(btn("★ Wall of Sound",`sigWallOfSound(U('${a.id}'))`, a.sigDone, TIPS.wallOfSound));
+  } else if(a.role==="Bass"){
+    b.push(btn("Lock Groove (root+slow)","arm('groove')",false,TIPS.lockGroove));
+    b.push(btn("Bass Drop (confuse band)","arm('bassdrop')",false,TIPS.bassDrop));
+    b.push(btn("★ Drop the Bass",`sigDropTheBass(U('${a.id}'))`, a.sigDone, TIPS.dropTheBass));
+  } else if(a.role==="Sonic"){
+    b.push(btn("Power Chord (stun)","arm('chord')",false,TIPS.powerChord));
+    b.push(btn("Shred Solo (band)","arm('shredsolo')",false,TIPS.shredSolo));
+    b.push(btn("★ Face Melter",`sigFaceMelter(U('${a.id}'))`, a.sigDone, TIPS.faceMelter));
+  } else if(a.role==="Keys"){
+    b.push(btn("Sustain (regen)","arm('sustain')",false,TIPS.sustain));
+    b.push(btn("Ballad (big heal+cleanse)","arm('ballad')",false,TIPS.ballad));
+    b.push(btn("Anthem (squad buff)",`anthem(U('${a.id}'))`,false,TIPS.anthem));
+    b.push(btn("★ Crescendo",`sigCrescendo(U('${a.id}'))`, a.sigDone, TIPS.crescendo));
+  } else if(a.role==="Vocal"){
+    b.push(btn("Mic Drop (stagger)","arm('micdrop')",false,TIPS.micDrop));
+    b.push(btn("Belt It (3 hits)",`beltIt(U('${a.id}'))`,false,TIPS.beltIt));
+    b.push(btn("Crowd Surf (+Dodge, move)",`crowdSurf(U('${a.id}'))`,false,TIPS.crowdSurf));
+    b.push(btn("★ Showstopper",`sigShowstopper(U('${a.id}'))`, a.sigDone, TIPS.showstopper));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -2106,6 +2430,26 @@ function render(){
     ? "Telepath support: Mind-Mend heals + cleanses, Embolden shields + grants Dodge, Mind Spike Confuses a foe (it'll turn on its own side). Mind Link does it all for the squad."
     : a.role==="Fly"
     ? "Flying striker: Dive Bomb (melee + knockback) and Heat Vision (ranged beam) reach ANY band — hit, then Barrel Roll to reposition with a Dodge. Squishy but mobile."
+    : a.role==="Vamp"
+    ? "Vampire tank: Taunt to pull the warband, then Bite to tank by drinking the damage back (lifesteal). Mist Form for a Dodge. Crimson Feast drains the whole field."
+    : a.role==="Witch"
+    ? "Hexcraft: Curse of Doom marks a foe to detonate in 2 rounds (8, ignores shields) — set it early. Evil Eye Blinds + Slows a band. Black Sabbath hexes everyone."
+    : a.role==="Hell"
+    ? "Hellfire artillery: Shadowbolt ignores Barriers, Hellfire sets a whole band Burning. Damnation damns them all. Squishy — stay at the back."
+    : a.role==="Necro"
+    ? "Necromancer: Siphon Life drains a foe to heal your most-wounded, Raise Dead revives a fallen ally, Bone Ward shields. Mass Resurrection raises everyone."
+    : a.role==="Reaper"
+    ? "Reaper striker: Scythe to Bleed, then Harvest to EXECUTE foes under ~35% HP outright. Phase to reposition + Dodge. Soften them, then reap."
+    : a.role==="Drum"
+    ? "Drummer tank: Taunt to hold the stage, Crash to Stagger whoever's in your face, Backbeat to shield up. Wall of Sound taunts + shields + rattles the whole field."
+    : a.role==="Bass"
+    ? "Bass controller: Lock Groove pins one foe (Root + Slow), Bass Drop Confuses a whole band. Drop the Bass convulses everyone. Lock the rhythm, lock the fight."
+    : a.role==="Sonic"
+    ? "Lead guitar: Power Chord is a big single hit that stuns; Shred Solo rakes a band and stacks Shred (they take more from everything). Face Melter for the encore."
+    : a.role==="Keys"
+    ? "Keyboard support: Sustain (regen-over-time), Ballad (big heal + cleanse), Anthem (squad Barrier + Dodge). Crescendo does it all for the whole band."
+    : a.role==="Vocal"
+    ? "Vocalist striker: get in their face — Mic Drop (melee + stun), Belt It (3 quick hits), Crowd Surf to dive anywhere with a Dodge. Loud, fast, fragile."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -2257,6 +2601,42 @@ const TIPS = {
   heatVision:"Heat Vision — ranged heat beam (any band): Fire damage that can set the enemy Burning.",
   takeFlight:"Barrel Roll — take to the air: +1 Dodge and a free reposition.",
   meteorDive:"★ Meteor Dive (once/expedition) — drop on one foe for huge damage + Stagger + knockback, with a shockwave that splashes its band.",
+  // Team 9 (Nightfall)
+  bite:"Bite — melee strike that heals you for half the damage dealt (lifesteal).",
+  mistForm:"Mist Form — dissolve to mist: +1 Dodge and a free reposition.",
+  crimsonFeast:"★ Crimson Feast (once/expedition) — drain every enemy and heal big off the carnage.",
+  curseDoom:"Curse of Doom — mark a foe; after 2 rounds it detonates for 8 (ignores Barrier). Set it up early.",
+  evilEye:"Evil Eye — hex a whole band: damage + Blind + Slow everyone there.",
+  blackSabbath:"★ Black Sabbath (once/expedition) — hex the warband: damage + Blind + Shred every enemy.",
+  shadowbolt:"Shadowbolt — dark ranged bolt that ignores the enemy's Barrier.",
+  hellfire:"Hellfire — rain shadowflame on a band: damage + set everyone there Burning.",
+  damnation:"★ Damnation (once/expedition) — shadowflame swallows the field: heavy damage (ignores Barrier) + Burning on all.",
+  siphonLife:"Siphon Life — drain a foe and pour the stolen life into your most-wounded ally.",
+  raiseDead:"Raise Dead — revive a fallen ally (8 HP), or give a living ally Regen.",
+  boneWard:"Bone Ward — raise a Barrier of bone around an ally.",
+  massRes:"★ Mass Resurrection (once/expedition) — raise every fallen ally and heal the living.",
+  scythe:"Scythe — sweeping melee that makes the enemy Bleed.",
+  harvest:"Harvest — EXECUTE: reaps a foe under ~35% HP outright; otherwise a solid hit. Soften, then reap.",
+  reaperPhase:"Phase — slip through the veil: +1 Dodge and a free reposition.",
+  deathsDoor:"★ Death's Door (once/expedition) — reap every enemy under ~40% HP; the rest take heavy damage + Bleed.",
+  // Team 10 (the Band)
+  crash:"Crash — a cymbal crash that damages + Staggers every enemy in your band.",
+  backbeat:"Backbeat — lock into the rhythm for a self-Barrier.",
+  wallOfSound:"★ Wall of Sound (once/expedition) — a huge self-Barrier + Taunt, and the bass Staggers the whole field.",
+  lockGroove:"Lock Groove — pin one foe to the rhythm: damage + Root + Slow.",
+  bassDrop:"Bass Drop — drop the bass on a band: damage + Slow + Confuse everyone there.",
+  dropTheBass:"★ Drop the Bass (once/expedition) — subsonic wave: damage + Slow + Confuse every enemy.",
+  powerChord:"Power Chord — a big single sonic hit that STUNS (Staggers) on a clean strike.",
+  shredSolo:"Shred Solo — rake a whole band with a solo: damage + stacks Shred (they take more from everything).",
+  faceMelter:"★ Face Melter (once/expedition) — damage + Shred + Stagger every enemy.",
+  sustain:"Sustain — hold a chord on an ally: Regenerating (heal over time) + a little instant heal.",
+  ballad:"Ballad — a tender song: big heal for an ally and clears their afflictions.",
+  anthem:"Anthem — rally the whole squad with a Barrier and a Dodge each.",
+  crescendo:"★ Crescendo (once/expedition) — the squad heals, gains a Barrier, and Regenerates.",
+  micDrop:"Mic Drop — get in their face: melee hit that Staggers on a clean strike.",
+  beltIt:"Belt It — a screaming run: 3 quick hits at random enemies.",
+  crowdSurf:"Crowd Surf — dive into the crowd: +1 Dodge and a free reposition.",
+  showstopper:"★ Showstopper (once/expedition) — the whole crowd erupts: heavy damage + Stagger on every enemy.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -2355,6 +2735,23 @@ function arm(kind){
   if(kind==="dive")     S.pending={type:"dive",actor:a.id,targets:"enemy"};
   if(kind==="heat")     S.pending={type:"heat",actor:a.id,targets:"enemy"};
   if(kind==="meteor")   S.pending={type:"meteor",actor:a.id,targets:"enemy"};
+  if(kind==="bite")     S.pending={type:"bite",actor:a.id,targets:"enemy"};
+  if(kind==="doom")     S.pending={type:"doom",actor:a.id,targets:"enemy"};
+  if(kind==="evileye")  S.pending={type:"evileye",actor:a.id};
+  if(kind==="shadowbolt")S.pending={type:"shadowbolt",actor:a.id,targets:"enemy"};
+  if(kind==="hellfire") S.pending={type:"hellfire",actor:a.id};
+  if(kind==="siphonlife")S.pending={type:"siphonlife",actor:a.id,targets:"enemy"};
+  if(kind==="raise")    S.pending={type:"raise",actor:a.id,targets:"ally"};
+  if(kind==="boneward") S.pending={type:"boneward",actor:a.id,targets:"ally"};
+  if(kind==="scythe")   S.pending={type:"scythe",actor:a.id,targets:"enemy"};
+  if(kind==="harvest")  S.pending={type:"harvest",actor:a.id,targets:"enemy"};
+  if(kind==="groove")   S.pending={type:"groove",actor:a.id,targets:"enemy"};
+  if(kind==="bassdrop") S.pending={type:"bassdrop",actor:a.id};
+  if(kind==="chord")    S.pending={type:"chord",actor:a.id,targets:"enemy"};
+  if(kind==="shredsolo")S.pending={type:"shredsolo",actor:a.id};
+  if(kind==="sustain")  S.pending={type:"sustain",actor:a.id,targets:"ally"};
+  if(kind==="ballad")   S.pending={type:"ballad",actor:a.id,targets:"ally"};
+  if(kind==="micdrop")  S.pending={type:"micdrop",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -2374,6 +2771,10 @@ function pickBand(i){
   else if(t==="flourBomb") flourBomb(a,i);
   else if(t==="icewall") iceWall(a,i);
   else if(t==="chain") chainLightning(a,i);
+  else if(t==="evileye") evilEye(a,i);
+  else if(t==="hellfire") hellfire(a,i);
+  else if(t==="bassdrop") bassDrop(a,i);
+  else if(t==="shredsolo") shredSolo(a,i);
 }
 function pickTool(g){ if(!S.pending) return; const a=U(S.pending.actor);
   S.pending.tool=g; S.pending.toolPick=false;
@@ -2449,6 +2850,19 @@ function pick(arg){
   if(type==="dive"){ diveBomb(a,target); return; }
   if(type==="heat"){ heatVision(a,target); return; }
   if(type==="meteor"){ sigMeteorDive(a,target); return; }
+  if(type==="bite"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Bite hits Engaged or Near."; return; } bite(a,target); return; }
+  if(type==="doom"){ curseDoom(a,target); return; }
+  if(type==="shadowbolt"){ shadowbolt(a,target); return; }
+  if(type==="siphonlife"){ siphonLife(a,target); return; }
+  if(type==="raise"){ raiseDead(a,target); return; }
+  if(type==="boneward"){ boneWard(a,target); return; }
+  if(type==="scythe"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — the Scythe hits Engaged or Near."; return; } scythe(a,target); return; }
+  if(type==="harvest"){ harvest(a,target); return; }
+  if(type==="groove"){ lockGroove(a,target); return; }
+  if(type==="chord"){ powerChord(a,target); return; }
+  if(type==="sustain"){ sustain(a,target); return; }
+  if(type==="ballad"){ ballad(a,target); return; }
+  if(type==="micdrop"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Mic Drop hits Engaged or Near."; return; } micDrop(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
