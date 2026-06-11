@@ -80,9 +80,11 @@
   <div class="doom">ROUND <b id="round" style="color:var(--ink)">1</b></div>
   <div class="doom">TEAM <b id="teamlabel" style="color:var(--ink)">1</b></div>
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
-  <button onclick="startExpedition(S.team)" style="margin-left:auto" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
+  <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
+  <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
   <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:1))))" title="Cycle to the next squad (1 → 2 → 3 → 4 → 5)">Switch squad ⇄</button>
 </div>
+<div id="builder" class="panel" style="display:none"></div>
 
 <div class="cols">
   <div class="col"><h2>Your party</h2><div id="party"></div></div>
@@ -111,6 +113,8 @@ const roll2 = () => { const a=1+Math.floor(Math.random()*6),
 const tier  = n => n>=10 ? "full" : n>=7 ? "partial" : "fail";
 
 let S;
+let customPicks=null, build=null, buildPool=null;          // squad builder state
+const ROLES=["Tank","Controller","Artillery","Support","Striker"];
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
   { id:"steele", name:"Steele", role:"Metal", side:"party", hp:22,max:22, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false, stance:false },
@@ -147,8 +151,38 @@ function team5(){ return [
   { id:"chrona", name:"Chrona", role:"Time",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"deadeye",name:"Deadeye",role:"Gun",     side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
-function freshParty(team){ return team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1(); }
+function freshParty(team){
+  if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
+    return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
+  return team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+}
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
+
+/* ─── Squad builder ───────────────────────────────────────────────────────── */
+// Every team is ordered tank, controller, artillery, support, striker — so index = role.
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5()]; const pool=[[],[],[],[],[]];
+  teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
+function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
+function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
+function renderBuilder(){
+  document.querySelector(".cols").style.display="none";
+  document.getElementById("control").style.display="none";
+  document.getElementById("log").style.display="none";
+  const bd=document.getElementById("builder"); bd.style.display="";
+  let html=`<h3 style="margin:0 0 10px">Build your squad — pick one hero per role</h3>`;
+  ROLES.forEach((role,i)=>{
+    html+=`<div style="margin-bottom:10px"><div style="color:var(--dim);font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">${role}</div><div class="acts">`;
+    buildPool[i].forEach((u,j)=>{ const sel=build[i]&&build[i].id===u.id;
+      html+=`<button class="${sel?"primary":""}" onclick="pickHero(${i},${j})">${u.name} <small style="opacity:.55">· ${u.role}</small></button>`; });
+    html+=`</div></div>`;
+  });
+  const ready=build.every(x=>x);
+  html+=`<div class="acts" style="margin-top:14px"><button class="primary" ${ready?"":"disabled"} onclick="startCustom()">⚔ Battle!</button><button class="ghost" onclick="closeBuilder()">cancel</button></div>`;
+  bd.innerHTML=html;
+}
+function closeBuilderDOM(){ document.querySelector(".cols").style.display=""; document.getElementById("control").style.display=""; document.getElementById("log").style.display=""; document.getElementById("builder").style.display="none"; }
+function closeBuilder(){ build=null; buildPool=null; closeBuilderDOM(); if(S) render(); }
+function startCustom(){ if(!build.every(x=>x)) return; customPicks=build.map(u=>u.id); build=null; buildPool=null; closeBuilderDOM(); newGame(0); }
 function foes(fight){                                       // a varied warband per expedition fight
   if(fight>=3) return [                                    // climax — boss + buffer + caster + grunts
     mk("warlord","Warlord","brute",40,2,{ctrlImmune:true,boss:true}),
@@ -173,7 +207,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -1171,8 +1205,9 @@ function finish(result,why){
 function startButtons(){
   const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:1)));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
-    +`<button onclick="startExpedition(S.team)">⚔ Expedition (Team ${S.team})</button>`
-    +`<button onclick="newGame(${next})">Switch to Team ${next}</button>`;
+    +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
+    +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
+    +`<button onclick="openBuilder()">🛠 Build squad</button>`;
 }
 
 /* ─── render ──────────────────────────────────────────────────────────────── */
@@ -1229,7 +1264,7 @@ function unitCard(u){
 function render(){
   document.getElementById("doom").textContent=S.doom;
   document.getElementById("round").textContent=S.round;
-  document.getElementById("teamlabel").textContent=S.team;
+  document.getElementById("teamlabel").textContent=S.team===0?"Custom":S.team;
   const fb=document.getElementById("fightbox");
   if(fb){ if(S.mode==="expedition"){ fb.style.display=""; document.getElementById("fightlabel").textContent=`${S.expFight}/${S.expTotal}`; } else fb.style.display="none"; }
   document.getElementById("doompips").textContent="◆".repeat(Math.max(0,S.doom));
