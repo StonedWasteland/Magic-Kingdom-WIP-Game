@@ -1767,7 +1767,8 @@ function pick(arg){
   } else if(type==="hurl"){ hurl(a,target); }
 }
 
-newGame();
+newGame();        // init a default battle behind the scenes (so the topbar buttons have a valid state)…
+openBuilder();    // …but open on the squad builder
 </script>
 </body>
 </html>
