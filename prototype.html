@@ -799,7 +799,7 @@ function hallOfMirrors(actor,band){       // Confuse a whole band
   log(`${actor.name} fills ${BANDS[band]} with mirrors — ${hit.length?`${hit.length} foe(s) Confused`:"but it's empty"}.`,"l-root");
   finishAction(actor);
 }
-function blur(actor){                     // Confuse: become an illusion — gain Dodge
+function afterimage(actor){               // Confuse: become an illusion — gain Dodge
   spend(actor,1);
   actor.dodge=(actor.dodge||0)+2;
   log(`${actor.name} blurs into afterimages — +2 Dodge.`,"l-hit");
@@ -842,7 +842,7 @@ function sigExsanguinate(actor){          // Siphon signature: drain all, heal t
   log(`${actor.name} casts EXSANGUINATE — the warband bleeds 4 each; the squad drinks ${heal}.`,"l-bad");
   finishAction(actor);
 }
-function focus(actor,target){             // Prism: 1 enemy, hard
+function focusBeam(actor,target){         // Prism: 1 enemy, hard
   const p=S.push; S.push=false; spend(actor,p?2:1);
   const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
   if(t==="fail"){ log(`  ${actor.name}'s beam misses ${target.name}.`,"l-miss"); }
@@ -1422,7 +1422,7 @@ function render(){
   } else if(a.role==="Confuse"){
     b.push(btn("Vertigo (confuse)","arm('vertigo')",false,TIPS.vertigo));
     b.push(btn("Hall of Mirrors (zone)","arm('mirrors')",false,TIPS.mirrors));
-    b.push(btn("Blur (+Dodge)",`blur(U('${a.id}'))`,false,TIPS.blur));
+    b.push(btn("Blur (+Dodge)",`afterimage(U('${a.id}'))`,false,TIPS.blur));
     b.push(btn("★ Bedlam",`sigBedlam(U('${a.id}'))`, a.sigDone, TIPS.bedlam));
   } else if(a.role==="Siphon"){
     b.push(btn("Drain","arm('drain')",false,TIPS.drain));
@@ -1707,7 +1707,7 @@ function pick(arg){
   if(type==="drain"){ drain(a,target); return; }
   if(type==="leech"){ leech(a,target); return; }
   if(type==="enfeeble"){ enfeeble(a,target); return; }
-  if(type==="focus"){ focus(a,target); return; }
+  if(type==="focus"){ focusBeam(a,target); return; }
   if(type==="haste"){ haste(a,target); return; }
   if(type==="rewind"){ rewind(a,target); return; }
   if(type==="stasis"){ stasis(a,target); return; }
