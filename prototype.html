@@ -391,10 +391,10 @@ function graft(actor,target){            // Regeneration support: heal an ally, 
   }
   finishAction(actor);
 }
-function mendSelf(actor){                 // Regeneration defense: turn the gift inward
+function mendAlly(actor,target){          // Regeneration: a straight, instant heal for any ally
   spend(actor,1);
-  setSt(actor,"regen",3);
-  log(`${actor.name} turns the gift inward — Regenerating (3/round, 3 rounds).`,"l-hit");
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+5);
+  log(`${actor.name} mends ${target.name} — heals ${target.hp-b} instantly.`,"l-hit");
   finishAction(actor);
 }
 function rend(actor,target){             // Regeneration offense: Slashing + Bleeding (the bleed war)
@@ -1357,7 +1357,8 @@ function render(){
         : pt==="rend" ? "Click an enemy at Engaged or Near to Rend."
         : pt==="haymaker" ? "Click an enemy at Engaged or Near to Haymaker (knocks it back a band)."
         : pt==="hurl" ? "Click any enemy to Hurl debris at."
-        : pt==="graft" ? "Click an ally to heal — or a Downed ally to revive."
+        : pt==="graft" ? "Click an ally to heal over time — or a Downed ally to revive."
+        : pt==="mend" ? "Click an ally to Mend (instant heal)."
         : pt==="crush" ? "Click any enemy to Crush (gravity reaches every band)."
         : pt==="strangle" ? "Click any enemy to Strangle with vines."
         : pt==="lance" ? "Click any enemy to lance with light."
@@ -1408,8 +1409,8 @@ function render(){
     b.push(btn("Sledge","arm('sledge')",false,TIPS.sledge));
     b.push(btn("★ Living Fortress",`sigLivingFortress(U('${a.id}'))`, a.sigDone, TIPS.livingFortress));
   } else if(a.role==="Regen"){
-    b.push(btn("Graft (heal / revive)","arm('graft')",false,TIPS.graft));
-    b.push(btn("Mend Self",`mendSelf(U('${a.id}'))`,false,TIPS.mendSelf));
+    b.push(btn("Graft (heal-over-time / revive)","arm('graft')",false,TIPS.graft));
+    b.push(btn("Mend (instant heal)","arm('mend')",false,TIPS.mend));
     b.push(btn("Rend","arm('rend')",false,TIPS.rend));
     b.push(btn("★ Undying",`sigUndying(U('${a.id}'))`, a.sigDone, TIPS.undying));
   } else if(a.role==="Physical"){
@@ -1514,7 +1515,7 @@ function render(){
   hint.textContent=a.role==="Metal"
     ? "Tank line: Stance: Metal to armor up, then Taunt to pull the Raiders onto you — the others work free while you soak."
     : a.role==="Regen"
-    ? "Medic line: Graft a Regenerating heal onto the tank (or revive a Downed ally). Keep the healer out of fire — it Cauterizes regen."
+    ? "Medic line: Graft = heal-over-time (or revive a Downed ally); Mend = a quick instant heal. Keep her out of fire — it Cauterizes regen."
     : a.role==="Physical"
     ? "Striker line: Haymaker knocks a Raider back a band — into a fire to cook it, or off your line to buy time. Hurl Debris for ranged burst."
     : a.role==="Gravity"
@@ -1569,7 +1570,7 @@ const TIPS = {
   taunt:"Taunt — force every enemy to attack this unit.",
   sledge:"Sledge — heavy melee strike that can Stagger (hits harder while in Metal stance).",
   graft:"Graft — heal an ally over time, or revive a Downed ally.",
-  mendSelf:"Mend Self — heal yourself over time.",
+  mend:"Mend — a straight, instant heal for any ally (no waiting).",
   rend:"Rend — claw strike that makes the enemy Bleed.",
   haymaker:"Haymaker — melee hit that knocks the enemy back a band.",
   hurl:"Hurl Debris — ranged throw that can Stagger.",
@@ -1679,6 +1680,7 @@ function arm(kind){
   if(kind==="sledge") S.pending={type:"sledge",actor:a.id,targets:"enemy"};
   if(kind==="rend")   S.pending={type:"rend",actor:a.id,targets:"enemy"};
   if(kind==="graft")  S.pending={type:"graft",actor:a.id,targets:"ally"};
+  if(kind==="mend")   S.pending={type:"mend",actor:a.id,targets:"ally"};
   if(kind==="haymaker") S.pending={type:"haymaker",actor:a.id,targets:"enemy"};
   if(kind==="hurl")   S.pending={type:"hurl",actor:a.id,targets:"enemy"};
   if(kind==="crush")    S.pending={type:"crush",actor:a.id,targets:"enemy"};
@@ -1746,6 +1748,7 @@ function pick(arg){
   if(type==="scorch"){ scorch(a,arg); return; }
   const target=U(arg);
   if(type==="graft"){ graft(a,target); return; }   // ally target (may be Downed)
+  if(type==="mend"){ mendAlly(a,target); return; }
   if(type==="aegis"){ aegis(a,target); return; }
   if(type==="cleanse"){ cleanse(a,target); return; }
   if(type==="crush"){ crush(a,target); return; }
