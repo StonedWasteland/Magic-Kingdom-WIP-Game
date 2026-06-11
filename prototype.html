@@ -81,7 +81,7 @@
   <div class="doom">TEAM <b id="teamlabel" style="color:var(--ink)">1</b></div>
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="startExpedition(S.team)" style="margin-left:auto" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:1))" title="Cycle to the next squad (1 → 2 → 3)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:1)))" title="Cycle to the next squad (1 → 2 → 3 → 4)">Switch squad ⇄</button>
 </div>
 
 <div class="cols">
@@ -133,7 +133,14 @@ function team3(){ return [
   { id:"hazey", name:"Hazey", role:"Ganja", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"hops",  name:"Hops",  role:"Drunk", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
-function freshParty(team){ return team===3?team3():team===2?team2():team1(); }
+function team4(){ return [
+  { id:"marrow", name:"Marrow", role:"Bone",  side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"brea",   name:"Brea",   role:"Tar",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"gray",   name:"Gray",   role:"Rad",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"mel",    name:"Mel",    role:"Honey", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"mercer", name:"Mercer", role:"Quick", side:"party", hp:20,max:20, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
+function freshParty(team){ return team===4?team4():team===3?team3():team===2?team2():team1(); }
 function foes(fight){                                       // a varied warband per expedition fight
   if(fight>=3) return [                                    // climax — boss + buffer + caster + grunts
     mk("warlord","Warlord","brute",40,2,{ctrlImmune:true,boss:true}),
@@ -158,7 +165,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -187,7 +194,7 @@ function nextFight(){                                        // interlude → ne
   p.forEach(u=>{
     if(!alive(u)){ u.hp=Math.ceil(u.max*0.3); u.st.down=false; }  // the fallen are dragged on, badly battered
     else u.hp=Math.min(u.max, u.hp + Math.ceil(u.max*0.2));       // a short breather — not a full heal
-    u.strain=0; u.st={}; u.barrier=0; u.stance=false; u.well=false; u.acted=false; u.moved=false;
+    u.strain=0; u.st={}; u.barrier=0; u.dodge=0; u.stance=false; u.well=false; u.acted=false; u.moved=false;
     // sigDone is NOT reset — Signatures are once per EXPEDITION, not per fight.
   });
   S.expFight++;
@@ -222,7 +229,11 @@ function damage(u,n,how){                            // returns true if it lande
   if(n<=0) return true;
   u.hp=Math.max(0,u.hp-n);
   if(u.hp===0 && !u.st.down){ u.st.down=true;
-    log(`  ✖ ${u.name} is DOWNED (${how}).`, "l-bad"); }
+    log(`  ✖ ${u.name} is DOWNED (${how}).`, "l-bad");
+    const m=S.units.find(x=>x.role==="Bone"&&alive(x)&&x!==u);   // Marrow harvests the fallen (ally or foe)
+    if(m){ const b=m.hp; m.hp=Math.min(m.max,m.hp+2); m.barrier=(m.barrier||0)+2;
+      log(`  ${m.name} harvests the bones — +${m.hp-b} HP, +2 Barrier.`,"l-hit"); }
+  }
   return true;
 }
 
@@ -633,6 +644,135 @@ function sigDrunkenRage(actor,target){    // Drunk signature: lock both in place
   finishAction(actor);
 }
 
+/* ─── Team 4 actions ──────────────────────────────────────────────────────── */
+function bonewall(actor){                // Bone: bone plating — Taunt + Barrier
+  spend(actor,1);
+  setSt(actor,"taunting",2); actor.barrier=(actor.barrier||0)+6;
+  log(`${actor.name} throws up a wall of bone — Taunting + Barrier 6.`,"l-root");
+  finishAction(actor);
+}
+function boneSpurs(actor,target){        // Bone offense: Piercing + Bleeding
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s spurs miss ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Piercing"); log(`  ${target.name} takes 4.`,"l-part"); }
+  else { damage(target,4,"Piercing"); setSt(target,"bleeding",3); log(`  ${target.name} takes 4 + Bleeding (bone shards).`,"l-hit"); }
+  finishAction(actor);
+}
+function marrowfeast(actor){             // Bone: heal per downed enemy (consume the corpses)
+  spend(actor,1);
+  const corpses=S.units.filter(u=>u.side==="enemy"&&!alive(u)).length;
+  if(corpses){ const b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+corpses*3); log(`${actor.name} feasts on ${corpses} corpse(s) — heals ${actor.hp-b}.`,"l-hit"); }
+  else log(`${actor.name} finds no bones to harvest yet.`,"l-miss");
+  finishAction(actor);
+}
+function sigCharnel(actor){              // Bone signature: a storm of bone shrapnel
+  spend(actor,4); actor.sigDone=true;
+  actor.barrier=(actor.barrier||0)+10; setSt(actor,"taunting",3);
+  log(`${actor.name} erupts into a CHARNEL STORM — Barrier 10, Taunting, shrapnel everywhere:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,4,"bone shrapnel"); setSt(e,"bleeding",2); log(`  ${e.name} takes 4 + Bleeding.`,"l-part"); });
+  finishAction(actor);
+}
+function tarGlob(actor,target){          // Tar: root one foe + chip
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s tar misses ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"Tar"); setSt(target,"rooted",2); log(`  ${target.name} takes ${t==="full"?3:2} + Rooted in tar.`,"l-root"); }
+  finishAction(actor);
+}
+function tarPit(actor,band){             // Tar: mire a whole band — Slow + Root
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ setSt(e,"slowed",2); setSt(e,"rooted",1); });
+  log(`${actor.name} floods ${BANDS[band]} with tar — ${hit.length?`${hit.length} foe(s) mired (Slowed + Rooted)`:"but it's empty"}.`,"l-root");
+  finishAction(actor);
+}
+function smother(actor,target){          // Tar: entomb one foe — Suppressed + Blinded
+  spend(actor,1);
+  setSt(target,"suppressed",2); setSt(target,"blinded",2);
+  log(`${actor.name} smothers ${target.name} in tar — Suppressed (can't act) + Blinded.`,"l-root");
+  finishAction(actor);
+}
+function sigThePit(actor){               // Tar signature: the whole field becomes a tar pit
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} opens THE PIT — the warband sinks into tar:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,3,"the tar pit"); setSt(e,"rooted",2); setSt(e,"slowed",3); log(`  ${e.name} takes 3 + Rooted + Slowed.`,"l-part"); });
+  finishAction(actor);
+}
+function irradiate(actor,band){          // Rad: stack Sickness on a whole band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  if(!hit.length){ log(`${actor.name} irradiates an empty ${BANDS[band]}.`,"l-miss"); finishAction(actor); return; }
+  log(`${actor.name} floods ${BANDS[band]} with silent radiation:`,"l-fire");
+  hit.forEach(e=>{ e.st.sickness=(e.st.sickness||0)+2; log(`  ${e.name} — Sickness ${e.st.sickness} (takes its stack count each round).`,"l-fire"); });
+  finishAction(actor);
+}
+function falloutBolt(actor,target){      // Rad: single — damage + Sickness
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s bolt fizzles past ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"Radiation"); target.st.sickness=(target.st.sickness||0)+2; log(`  ${target.name} takes ${t==="full"?3:2} + Sickness ${target.st.sickness}.`,"l-fire"); }
+  finishAction(actor);
+}
+function sigMeltdown(actor){             // Rad signature: irradiate everything
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} goes critical — MELTDOWN floods the field:`,"l-fire");
+  liveEnemies().forEach(e=>{ damage(e,3,"Meltdown"); e.st.sickness=(e.st.sickness||0)+3; log(`  ${e.name} takes 3 + Sickness ${e.st.sickness}.`,"l-fire"); });
+  finishAction(actor);
+}
+function salve(actor,target){            // Honey: heal + seal wounds (cleanse DoTs)
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+4);
+  const sealed=[]; ["burning","bleeding","sickness","poison"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; sealed.push(k); } });
+  log(`${actor.name} salves ${target.name} — heals ${target.hp-b}${sealed.length?`, seals ${sealed.join(" & ")}`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function honeycomb(actor){               // Honey: small group heal
+  spend(actor,2);
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+2); });
+  log(`${actor.name} shares the honeycomb — the whole squad heals 2.`,"l-hit");
+  finishAction(actor);
+}
+function honeyguard(actor,target){       // Honey: sticky Barrier
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+5;
+  log(`${actor.name} coats ${target.name} in golden honey — Barrier ${target.barrier} (sticky).`,"l-hit");
+  finishAction(actor);
+}
+function sigGoldenFlood(actor){          // Honey signature: heal+shield all, mire enemies
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+4); u.barrier=(u.barrier||0)+5; });
+  liveEnemies().forEach(e=>setSt(e,"slowed",2));
+  log(`${actor.name} unleashes a GOLDEN FLOOD — squad healed 4 + Barrier 5; the warband mired (Slowed).`,"l-hit");
+  finishAction(actor);
+}
+function flowingStrike(actor,target){    // Quicksilver: melee + Poison on a full hit
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} flows wide of ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,3,"Quicksilver"); log(`  ${target.name} takes 3.`,"l-part"); }
+  else { damage(target,4,"Quicksilver"); setSt(target,"poison",3); log(`  ${target.name} takes 4 + Poisoned.`,"l-hit"); }
+  finishAction(actor);
+}
+function quicksilverSlip(actor){         // Quicksilver: slippery — gain a Dodge
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1;
+  log(`${actor.name} turns to liquid — slips the next hit (+1 Dodge).`,"l-hit");
+  finishAction(actor);
+}
+function globsplit(actor){               // Quicksilver: split into globs — two strikes at random foes
+  spend(actor,1);
+  log(`${actor.name} splits into globs — two strikes:`,"l-part");
+  for(let i=0;i<2;i++){ const e=pickEnemy(); if(e){ damage(e,3,"Quicksilver"); log(`  → ${e.name} takes 3.`,"l-part"); } }
+  finishAction(actor);
+}
+function sigArgentRush(actor){           // Quicksilver signature: flow through the whole line
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} floods the field in an ARGENT RUSH:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,4,"Quicksilver"); setSt(e,"poison",2); log(`  ${e.name} takes 4 + Poisoned.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -787,6 +927,8 @@ function endOfRound(){
       else { damage(u,3,"Burning"); log(`  ${u.name} burns for 3.`,"l-fire"); }
     }
     if(u.st.bleeding){ damage(u,2,"Bleeding"); log(`  ${u.name} bleeds for 2.`,"l-bad"); }
+    if(u.st.sickness){ damage(u,u.st.sickness,"radiation sickness"); log(`  ${u.name} sickens for ${u.st.sickness} (stacks).`,"l-fire"); }
+    if(u.st.poison){ damage(u,2,"poison"); log(`  ${u.name} suffers poison: 2.`,"l-part"); }
     if(u.st.regen){
       // Cauterized: fire (a Burning tag, or standing in an On-Fire band) sears wounds shut → no heal
       const cauterized = u.st.burning>0 || (S.fire[u.band]>0 && u.affinity!=="fire");
@@ -845,7 +987,7 @@ function endOfRound(){
   S.glass=S.glass.map(n=>Math.max(0,n-1));
   S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
   S.units.forEach(u=>{ u._hit=false; });                                        // reset per-round "was hit" (Gloop regen)
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns"].forEach(k=>{
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","sickness","poison"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });
 
   // win/lose
@@ -874,7 +1016,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:1);
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:1));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (Team ${S.team})</button>`
     +`<button onclick="newGame(${next})">Switch to Team ${next}</button>`;
@@ -902,7 +1044,9 @@ function unitCard(u){
     if(u.st.bleeding)chips.push(chip("bleed",`🩸 Bleeding ${u.st.bleeding}`,"Bleeding — 2 damage at end of round."));
     if(u.st.heavy)   chips.push(chip("rooted",`⬇ Heavy ${u.st.heavy}`,"Heavy — pinned by gravity; can't advance."));
     if(u.st.entangled)chips.push(chip("rooted",`🌿 Entangled ${u.st.entangled}`,"Entangled — gripped by vines; can't move."));
-    if(u.st.suppressed)chips.push(chip("rooted",`⛓ Suppressed ${u.st.suppressed}`,"Suppressed — entombed in cement; can't act at all."));
+    if(u.st.suppressed)chips.push(chip("rooted",`⛓ Suppressed ${u.st.suppressed}`,"Suppressed — entombed; can't act at all."));
+    if(u.st.sickness)chips.push(chip("fire",`☢ Sickness ${u.st.sickness}`,`Radiation Sickness — takes ${u.st.sickness} damage each round (its stack count). Decays 1/round.`));
+    if(u.st.poison)chips.push(chip("bleed",`☠ Poison ${u.st.poison}`,"Poison — takes 2 damage each round."));
     if(u.st.blinded) chips.push(chip("slowed",`😵 Blinded ${u.st.blinded}`,"Blinded — −1 to this unit's attack rolls."));
     if(u.st.shred)   chips.push(chip("bleed",`◈ Shred ${u.st.shred}`,`Shred — takes +${u.st.shred} damage from EVERY source. Stacks; fades 1/round.`));
     if(u.st.thorns)  chips.push(chip("regen",`❧ Thorns ${u.st.thorns}`,"Thorns — anyone who hits this unit takes 2 damage back."));
@@ -962,11 +1106,13 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
         : pt==="barrage" ? "Choose a band to spray with chi (hits every enemy there):"
+        : pt==="tarpit" ? "Choose a band to flood with tar (mires everyone there):"
+        : pt==="irradiate" ? "Choose a band to irradiate (stacks Sickness on everyone there):"
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -1002,6 +1148,13 @@ function render(){
         : pt==="strain" ? `Click an ally to pass the ${S.pending.strain}.`
         : pt==="blows" ? "Click an enemy at Engaged or Near to pummel."
         : pt==="rage" ? "Click any enemy for a DRUNKEN RAGE (locks you both in place)."
+        : pt==="bonespurs" ? "Click an enemy at Engaged or Near for Bone Spurs."
+        : pt==="targlob" ? "Click any enemy to root in tar."
+        : pt==="smother" ? "Click any enemy to Smother (entomb — can't act)."
+        : pt==="fallout" ? "Click any enemy for a Fallout Bolt (+Sickness)."
+        : pt==="salve" ? "Click an ally to heal + seal their wounds."
+        : pt==="honeyguard" ? "Click an ally to shield with honey."
+        : pt==="flow" ? "Click an enemy at Engaged or Near for a Flowing Strike."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -1072,6 +1225,30 @@ function render(){
     b.push(btn("Drunken Blows","arm('blows')",false,TIPS.blows));
     b.push(btn("Drink (+2 Dodge)",`drink(U('${a.id}'))`,false,TIPS.drink));
     b.push(btn("★ Drunken Rage","arm('rage')", a.sigDone, TIPS.rage));
+  } else if(a.role==="Bone"){
+    b.push(btn("Bone Wall (taunt+shield)",`bonewall(U('${a.id}'))`,false,TIPS.bonewall));
+    b.push(btn("Bone Spurs","arm('bonespurs')",false,TIPS.bonespurs));
+    b.push(btn("Marrowfeast",`marrowfeast(U('${a.id}'))`,false,TIPS.marrowfeast));
+    b.push(btn("★ Charnel Storm",`sigCharnel(U('${a.id}'))`, a.sigDone, TIPS.charnel));
+  } else if(a.role==="Tar"){
+    b.push(btn("Tar Glob","arm('targlob')",false,TIPS.targlob));
+    b.push(btn("Tar Pit (zone)","arm('tarpit')",false,TIPS.tarpit));
+    b.push(btn("Smother","arm('smother')",false,TIPS.smother));
+    b.push(btn("★ The Pit",`sigThePit(U('${a.id}'))`, a.sigDone, TIPS.thePit));
+  } else if(a.role==="Rad"){
+    b.push(btn("Irradiate (zone)","arm('irradiate')",false,TIPS.irradiate));
+    b.push(btn("Fallout Bolt","arm('fallout')",false,TIPS.fallout));
+    b.push(btn("★ Meltdown",`sigMeltdown(U('${a.id}'))`, a.sigDone, TIPS.meltdown));
+  } else if(a.role==="Honey"){
+    b.push(btn("Salve (heal + seal)","arm('salve')",false,TIPS.salve));
+    b.push(btn("Honeycomb",`honeycomb(U('${a.id}'))`,false,TIPS.honeycomb));
+    b.push(btn("Honeyguard (shield)","arm('honeyguard')",false,TIPS.honeyguard));
+    b.push(btn("★ Golden Flood",`sigGoldenFlood(U('${a.id}'))`, a.sigDone, TIPS.goldenFlood));
+  } else if(a.role==="Quick"){
+    b.push(btn("Flowing Strike","arm('flow')",false,TIPS.flow));
+    b.push(btn("Quicksilver Slip (+Dodge)",`quicksilverSlip(U('${a.id}'))`,false,TIPS.slip));
+    b.push(btn("Globsplit",`globsplit(U('${a.id}'))`,false,TIPS.globsplit));
+    b.push(btn("★ Argent Rush",`sigArgentRush(U('${a.id}'))`, a.sigDone, TIPS.argentRush));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -1104,6 +1281,16 @@ function render(){
     ? "Ganja: Pass the Strain to an ally (Indica = heal, Sativa = shield+dodge, Purple Haze = cleanse). Smoke Cloud heals the squad."
     : a.role==="Drunk"
     ? "Drunk: Drink for +2 Dodge (guaranteed misses), Drunken Blows to punch + blind (chance at a Dodge). Drunken Rage locks a foe down."
+    : a.role==="Bone"
+    ? "Bone tank: Bone Wall to taunt + shield. Marrow HEALS whenever any unit dies (yours or theirs); Marrowfeast devours downed foes. Bone Spurs to Bleed."
+    : a.role==="Tar"
+    ? "Tar: Tar Glob roots one, Tar Pit mires a whole band, Smother entombs a foe (can't act). Control that sticks."
+    : a.role==="Rad"
+    ? "Radiation: Irradiate a band or Fallout-Bolt a foe to stack Sickness — an escalating DoT that hits harder the more it piles up. Squishy: stay back."
+    : a.role==="Honey"
+    ? "Honey: Salve heals AND seals wounds (clears DoTs); Honeyguard shields; Honeycomb heals the squad. Golden Flood does it all + mires foes."
+    : a.role==="Quick"
+    ? "Quicksilver: Flowing Strike Poisons on a clean hit, Slip for a Dodge, Globsplit to hit two. Fast and slippery."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -1159,6 +1346,26 @@ const TIPS = {
   blows:"Drunken Blows — punch + Blind the enemy; a chance to gain a Dodge.",
   drink:"Drink — take a swig: +2 Dodge (the next 2 hits against you miss). Costs your turn.",
   rage:"★ Drunken Rage (once/expedition) — lock yourself and one enemy in place and pummel it (it can't act).",
+  // Team 4
+  bonewall:"Bone Wall — bone plating: Taunt enemies onto you + a Barrier. (Marrow also heals whenever ANY unit dies.)",
+  bonespurs:"Bone Spurs — melee Piercing that makes the enemy Bleed.",
+  marrowfeast:"Marrowfeast — devour the downed enemies on the field to heal (more corpses = more healing).",
+  charnel:"★ Charnel Storm (once/expedition) — big Barrier + Taunt, and bone shrapnel hits every enemy (Bleed).",
+  targlob:"Tar Glob — splatter a foe: chip damage + Rooted in the tar.",
+  tarpit:"Tar Pit — flood a band; every enemy there is Slowed + Rooted.",
+  smother:"Smother — entomb a foe in tar: Suppressed (can't act) + Blinded.",
+  thePit:"★ The Pit (once/expedition) — the whole warband sinks: damage + Rooted + Slowed on every enemy.",
+  irradiate:"Irradiate — flood a band with radiation: every enemy there gains Sickness (an escalating DoT).",
+  fallout:"Fallout Bolt — a single irradiating bolt: damage + Sickness stacks.",
+  meltdown:"★ Meltdown (once/expedition) — go critical: damage + heavy Sickness on every enemy.",
+  salve:"Salve — heal an ally AND seal their wounds (clears Burning / Bleeding / Sickness / Poison).",
+  honeycomb:"Honeycomb — a small heal for the whole squad.",
+  honeyguard:"Honeyguard — coat an ally in a sticky honey Barrier.",
+  goldenFlood:"★ Golden Flood (once/expedition) — heal + shield the whole squad and mire every enemy (Slow).",
+  flow:"Flowing Strike — quicksilver melee that Poisons on a clean hit.",
+  slip:"Quicksilver Slip — turn to liquid: gain a Dodge (negate the next instance of damage).",
+  globsplit:"Globsplit — split into two globs and strike two random enemies.",
+  argentRush:"★ Argent Rush (once/expedition) — flow through the whole line: damage + Poison every enemy.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -1205,6 +1412,15 @@ function arm(kind){
   if(kind==="strain")   S.pending={type:"strain",actor:a.id,strainPick:true};
   if(kind==="blows")    S.pending={type:"blows",actor:a.id,targets:"enemy"};
   if(kind==="rage")     S.pending={type:"rage",actor:a.id,targets:"enemy"};
+  if(kind==="bonespurs")S.pending={type:"bonespurs",actor:a.id,targets:"enemy"};
+  if(kind==="targlob")  S.pending={type:"targlob",actor:a.id,targets:"enemy"};
+  if(kind==="tarpit")   S.pending={type:"tarpit",actor:a.id};
+  if(kind==="smother")  S.pending={type:"smother",actor:a.id,targets:"enemy"};
+  if(kind==="irradiate")S.pending={type:"irradiate",actor:a.id};
+  if(kind==="fallout")  S.pending={type:"fallout",actor:a.id,targets:"enemy"};
+  if(kind==="salve")    S.pending={type:"salve",actor:a.id,targets:"ally"};
+  if(kind==="honeyguard")S.pending={type:"honeyguard",actor:a.id,targets:"ally"};
+  if(kind==="flow")     S.pending={type:"flow",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -1215,6 +1431,8 @@ function pickBand(i){
   else if(t==="glasszone") glassZone(a,i);
   else if(t==="marbles") marbles(a,i);
   else if(t==="barrage") chiBarrage(a,i);
+  else if(t==="tarpit") tarPit(a,i);
+  else if(t==="irradiate") irradiate(a,i);
 }
 function pickWeapon(w){ if(!S.pending) return; S.pending.weapon=w; S.pending.weaponPick=false; S.pending.targets="enemy"; render(); }
 function pickGag(g){ if(!S.pending) return; S.pending.gag=g; S.pending.gagPick=false; S.pending.targets="enemy"; render(); }
@@ -1240,6 +1458,13 @@ function pick(arg){
   if(type==="strain"){ strain(a,target); return; }
   if(type==="blows"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Drunken Blows hit Engaged or Near."; return; } drunkenBlows(a,target); return; }
   if(type==="rage"){ sigDrunkenRage(a,target); return; }
+  if(type==="bonespurs"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Bone Spurs hit Engaged or Near."; return; } boneSpurs(a,target); return; }
+  if(type==="targlob"){ tarGlob(a,target); return; }
+  if(type==="smother"){ smother(a,target); return; }
+  if(type==="fallout"){ falloutBolt(a,target); return; }
+  if(type==="salve"){ salve(a,target); return; }
+  if(type==="honeyguard"){ honeyguard(a,target); return; }
+  if(type==="flow"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Flowing Strike hits Engaged or Near."; return; } flowingStrike(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
