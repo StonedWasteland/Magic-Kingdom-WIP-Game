@@ -1511,7 +1511,7 @@ function harvest(actor,target){           // Reaper: EXECUTE — reaps the wound
   const p=S.push; S.push=false; spend(actor,p?2:1);
   const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
   if(t==="fail"){ log(`  ${target.name} evades the reaping.`,"l-miss"); finishAction(actor); return; }
-  const thresh=Math.ceil(target.max*0.35);
+  const thresh=Math.ceil(target.max*0.25);
   if(!target.ctrlImmune && target.hp<=thresh){ damage(target,999,"the Harvest",true); log(`  ${actor.name} HARVESTS ${target.name} — the wounded soul is reaped! ☠`,"l-bad"); }
   else { const d=t==="full"?5:3; damage(target,d,"the Scythe"); log(`  ${target.name} takes ${d}${target.hp<=thresh+4?" — nearly ripe for the Harvest":""}.`,t==="full"?"l-hit":"l-part"); }
   finishAction(actor);
@@ -1525,7 +1525,7 @@ function reaperPhase(actor){              // Reaper: phase — Dodge + repositio
 function sigDeathsDoor(actor){            // Reaper sig: reap the field
   spend(actor,4); actor.sigDone=true;
   log(`${actor.name} throws open DEATH'S DOOR:`,"l-bad");
-  liveEnemies().forEach(e=>{ const thresh=Math.ceil(e.max*0.4);
+  liveEnemies().forEach(e=>{ const thresh=Math.ceil(e.max*0.35);
     if(!e.ctrlImmune && e.hp<=thresh){ damage(e,999,"Death's Door",true); log(`  ${e.name} is reaped where it stands! ☠`,"l-bad"); }
     else { damage(e,5,"Death's Door"); setSt(e,"bleeding",2); log(`  ${e.name} takes 5 + Bleeding.`,"l-part"); } });
   finishAction(actor);
@@ -2109,7 +2109,7 @@ function render(){
         : pt==="raise" ? "Click a fallen ally to Raise, or a living ally for Regen."
         : pt==="boneward" ? "Click an ally to shield with a Bone Ward."
         : pt==="scythe" ? "Click an enemy at Engaged or Near to Scythe (Bleed)."
-        : pt==="harvest" ? "Click any enemy to Harvest — executes the wounded (under ~35% HP)."
+        : pt==="harvest" ? "Click any enemy to Harvest — executes the wounded (under ~25% HP)."
         : pt==="groove" ? "Click any enemy to Lock to the Groove (Root + Slow)."
         : pt==="chord" ? "Click any enemy to hit with a Power Chord (stun)."
         : pt==="sustain" ? "Click an ally to Sustain (Regen over time)."
@@ -2439,7 +2439,7 @@ function render(){
     : a.role==="Necro"
     ? "Necromancer: Siphon Life drains a foe to heal your most-wounded, Raise Dead revives a fallen ally, Bone Ward shields. Mass Resurrection raises everyone."
     : a.role==="Reaper"
-    ? "Reaper striker: Scythe to Bleed, then Harvest to EXECUTE foes under ~35% HP outright. Phase to reposition + Dodge. Soften them, then reap."
+    ? "Reaper striker: Scythe to Bleed, then Harvest to EXECUTE foes under ~25% HP outright. Phase to reposition + Dodge. Soften them, then reap."
     : a.role==="Drum"
     ? "Drummer tank: Taunt to hold the stage, Crash to Stagger whoever's in your face, Backbeat to shield up. Wall of Sound taunts + shields + rattles the whole field."
     : a.role==="Bass"
@@ -2616,9 +2616,9 @@ const TIPS = {
   boneWard:"Bone Ward — raise a Barrier of bone around an ally.",
   massRes:"★ Mass Resurrection (once/expedition) — raise every fallen ally and heal the living.",
   scythe:"Scythe — sweeping melee that makes the enemy Bleed.",
-  harvest:"Harvest — EXECUTE: reaps a foe under ~35% HP outright; otherwise a solid hit. Soften, then reap.",
+  harvest:"Harvest — EXECUTE: reaps a foe under ~25% HP outright; otherwise a solid hit. Soften, then reap.",
   reaperPhase:"Phase — slip through the veil: +1 Dodge and a free reposition.",
-  deathsDoor:"★ Death's Door (once/expedition) — reap every enemy under ~40% HP; the rest take heavy damage + Bleed.",
+  deathsDoor:"★ Death's Door (once/expedition) — reap every enemy under ~35% HP; the rest take heavy damage + Bleed.",
   // Team 10 (the Band)
   crash:"Crash — a cymbal crash that damages + Staggers every enemy in your band.",
   backbeat:"Backbeat — lock into the rhythm for a self-Barrier.",
