@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:1)))))" title="Cycle to the next squad (1 → … → 6)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:1))))))" title="Cycle to the next squad (1 → … → 7)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -141,6 +141,16 @@ const HERO_DESC={
   prism:"Choose your shot: Focus 1 hard / Split 3 medium / Scatter all.",
   chrona:"Time: grants EXTRA actions (Haste) and rewinds damage taken.",
   deadeye:"A gun arsenal (pistol/rifle/shotgun/SMG) — high ranged burst, squishy.",
+  phantasm:"Decoy tank: taunt+dodge mirror images; cloaks allies to untargetable.",
+  puppet:"Turns enemies on their own side — Charm one, Suggestion confuses a band.",
+  migraine:"Mind damage that IGNORES Barriers; hits Feared/Confused/Charmed harder.",
+  empath:"Foresight Dodge + heal/cleanse; buffs the whole squad.",
+  phobia:"Fear: makes foes cower, then preys on the terrified for big damage.",
+  castiron:"Cookware tank: Taunt + Barrier, Skillet bonks that Stagger.",
+  ducttape:"Tape control: roots one foe or a whole band; patches allies with shields.",
+  pantry:"Thrown food: scalding coffee, blinding flour, frozen-turkey haymakers.",
+  comfort:"Home remedies: heal + cure, an extra-action coffee, cozy Barriers.",
+  handyman:"Power-tool menu — nail gun / chainsaw / hammer / drill; squishy & mobile.",
 };
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
@@ -185,16 +195,23 @@ function team6(){ return [
   { id:"empath",   name:"Empath",   role:"Empath",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"phobia",   name:"Phobia",   role:"Fear",     side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team7(){ return [
+  { id:"castiron", name:"Cast Iron", role:"Iron",    side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"ducttape", name:"Duct Tape", role:"Tape",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"pantry",   name:"Pantry",    role:"Pantry",  side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"comfort",  name:"Comfort",   role:"Comfort", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"handyman", name:"Handyman",  role:"Tools",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -241,7 +258,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -1102,6 +1119,131 @@ function sigNightTerror(actor){          // Fear sig: Fear all + heavy damage to
   finishAction(actor);
 }
 
+/* ─── Team 7 actions (the junk drawer) ────────────────────────────────────── */
+function lidsUp(actor){                  // Iron: pots-and-pans cover — Taunt + Barrier
+  spend(actor,1);
+  setSt(actor,"taunting",2); actor.barrier=(actor.barrier||0)+7;
+  log(`${actor.name} raises a wall of pots & pans — Taunting + Barrier 7.`,"l-root");
+  finishAction(actor);
+}
+function skillet(actor,target){          // Iron: skillet bonk — Crushing + Stagger
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s skillet whiffs past ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Crushing"); log(`  ${target.name} takes 4.`,"l-part"); }
+  else { damage(target,4,"Crushing"); setSt(target,"stagger",1); log(`  ${target.name} takes 4 — CLONK, Staggered.`,"l-hit"); }
+  finishAction(actor);
+}
+function sigKitchenSink(actor){          // Iron sig: throw everything
+  spend(actor,4); actor.sigDone=true;
+  actor.barrier=(actor.barrier||0)+10; setSt(actor,"taunting",3);
+  log(`${actor.name} throws the KITCHEN SINK — Barrier 10, Taunting, cookware everywhere:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,4,"Crushing"); setSt(e,"stagger",1); log(`  ${e.name} takes 4 + Staggered.`,"l-part"); });
+  finishAction(actor);
+}
+function tapeDown(actor,target){         // Tape: root one foe + chip
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  The tape won't stick to ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"Crushing"); setSt(target,"rooted",2); log(`  ${target.name} takes ${t==="full"?3:2} + taped down (Rooted).`,"l-root"); }
+  finishAction(actor);
+}
+function bind(actor,band){               // Tape: tape a whole band together
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ setSt(e,"rooted",1); setSt(e,"slowed",2); });
+  log(`${actor.name} tapes ${BANDS[band]} together — ${hit.length?`${hit.length} foe(s) Rooted + Slowed`:"but it's empty"}.`,"l-root");
+  finishAction(actor);
+}
+function patch(actor,target){            // Tape: patch an ally with tape (shield)
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+4;
+  log(`${actor.name} slaps a patch of tape on ${target.name} — Barrier ${target.barrier}.`,"l-hit");
+  finishAction(actor);
+}
+function sigWholeRoll(actor){            // Tape sig: mummify the warband
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} unspools the WHOLE ROLL — the warband is mummified:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,3,"Crushing"); setSt(e,"rooted",2); setSt(e,"slowed",2); log(`  ${e.name} takes 3 + Rooted + Slowed.`,"l-part"); });
+  finishAction(actor);
+}
+function hotCoffee(actor,target){        // Pantry: scalding coffee — Fire + Burn
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s coffee splashes past ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?4:3,"Fire"); if(t==="full") setSt(target,"burning",2); log(`  ${target.name} takes ${t==="full"?4:3} Fire${t==="full"?" + Burning (scalded)":""}.`,"l-fire"); }
+  finishAction(actor);
+}
+function flourBomb(actor,band){          // Pantry: flour bomb — Blind a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"flour"); setSt(e,"blinded",2); });
+  log(`${actor.name} lobs a flour bomb at ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 2 + Blinded`:"a poof of nothing"}.`,"l-part");
+  finishAction(actor);
+}
+function frozenTurkey(actor,target){     // Pantry: a frozen turkey — big single Crushing
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  The turkey sails past ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?7:5,"Crushing"); if(t==="full") setSt(target,"stagger",1); log(`  ${target.name} takes ${t==="full"?7:5} from a frozen turkey${t==="full"?" + Staggered":""}.`,"l-hit"); }
+  finishAction(actor);
+}
+function sigSmorgasbord(actor){          // Pantry sig: throw the whole pantry
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} flings the entire pantry — SMORGASBORD:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"thrown food"); setSt(e,"blinded",1); log(`  ${e.name} takes 5 + Blinded.`,"l-part"); });
+  finishAction(actor);
+}
+function chickenSoup(actor,target){      // Comfort: soup heals + cures
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+4);
+  let c=0; ["burning","bleeding","sickness","poison","slowed"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  log(`${actor.name} ladles chicken soup for ${target.name} — heals ${target.hp-b}${c?`, soothes ${c} ailment(s)`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function coffee(actor,target){           // Comfort: caffeine — an extra action
+  spend(actor,2);
+  target.extraActs=(target.extraActs||0)+1;
+  log(`${actor.name} brews ${target.name} a strong coffee — an extra action this turn!`,"l-hit");
+  finishAction(actor);
+}
+function blanket(actor,target){          // Comfort: a cozy shield
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+5;
+  log(`${actor.name} wraps ${target.name} in a warm blanket — Barrier ${target.barrier}.`,"l-hit");
+  finishAction(actor);
+}
+function sigSundayDinner(actor){         // Comfort sig: a feast for the whole squad
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+5); u.barrier=(u.barrier||0)+4; ["burning","bleeding","sickness","poison"].forEach(k=>{ if(u.st[k]) u.st[k]=0; }); });
+  log(`${actor.name} lays out a SUNDAY DINNER — the whole squad heals 5, gets Barrier 4, and is cured.`,"l-hit");
+  finishAction(actor);
+}
+function grabTool(actor,target){         // Tools: use the chosen power tool
+  const g=(S.pending&&S.pending.tool)||"Hammer"; S.pending=null;
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  if(g==="Nail Gun"){ log(`${actor.name} sprays the nail gun:`,"l-part"); for(let i=0;i<3;i++){ const e=pickEnemy(); if(e){ damage(e,2,"nails"); log(`  → ${e.name} takes 2.`,"l-part"); } } finishAction(actor); return; }
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s ${g} misses ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  const full=(t==="full");
+  if(g==="Chainsaw"){ damage(target,full?5:4,"Slashing"); setSt(target,"bleeding",2); log(`  Chainsaw: ${full?5:4} + Bleeding.`,full?"l-hit":"l-part"); }
+  else if(g==="Hammer"){ damage(target,full?5:4,"Crushing"); if(full) setSt(target,"stagger",1); log(`  Hammer: ${full?5:4} Crushing${full?" + Staggered":""}.`,full?"l-hit":"l-part"); }
+  else { damage(target,full?5:4,"Piercing",true); log(`  Drill: ${full?5:4} Piercing (ignores Barrier).`,full?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function workbench(actor){               // Tools: duck behind the workbench — reposition + Dodge
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} ducks behind the workbench — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigPowerTrip(actor){            // Tools sig: every power tool at once
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} goes on a POWER TRIP — every tool screaming:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"power tools"); setSt(e,"bleeding",1); log(`  ${e.name} takes 5 + Bleeding.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -1355,7 +1497,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:1))));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:1)))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -1452,7 +1594,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -1462,8 +1604,14 @@ function render(){
         : pt==="mirrors" ? "Choose a band to fill with mirrors (Confuses everyone there):"
         : pt==="suggestion" ? "Choose a band to plant a suggestion (Confuses everyone there):"
         : pt==="mindquake" ? "Choose a band to mindquake (psychic damage, ignores Barriers):"
+        : pt==="bind" ? "Choose a band to tape together (Root + Slow everyone there):"
+        : pt==="flourBomb" ? "Choose a band to flour-bomb (damage + Blind everyone there):"
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
+        +`<button class="ghost" onclick="cancel()">cancel</button>`;
+    } else if(pt==="grabtool" && S.pending.toolPick){
+      hint.textContent="Grab a tool (Nail Gun = 3 sprays, Chainsaw = Bleed, Hammer = Stagger, Drill = ignores Barrier):";
+      acts.innerHTML=["Nail Gun","Chainsaw","Hammer","Drill"].map(g=>`<button onclick="pickTool('${g}')">${g}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
     } else if(pt==="summon" && S.pending.weaponPick){
       hint.textContent="Forge a weapon to strike with:";
@@ -1526,6 +1674,15 @@ function render(){
         : pt==="soothe" ? "Click an ally to heal + calm."
         : pt==="terrorize" ? "Click an enemy at Engaged or Near to Terrorize."
         : pt==="prey" ? "Click an enemy at Engaged or Near (huge vs the Feared)."
+        : pt==="skillet" ? "Click an enemy at Engaged or Near to bonk with the Skillet."
+        : pt==="tapeDown" ? "Click any enemy to Tape Down (Root)."
+        : pt==="patch" ? "Click an ally to Patch with a Barrier."
+        : pt==="hotCoffee" ? "Click any enemy to splash with Hot Coffee."
+        : pt==="frozenTurkey" ? "Click any enemy to hurl the Frozen Turkey at."
+        : pt==="chickenSoup" ? "Click an ally to heal + cure with Chicken Soup."
+        : pt==="coffee" ? "Click an ally to give an extra action."
+        : pt==="blanket" ? "Click an ally to wrap in a Barrier Blanket."
+        : pt==="grabtool" ? `Click an enemy to use the ${S.pending.tool}.`
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -1666,6 +1823,29 @@ function render(){
     b.push(btn("Prey on Fear","arm('prey')",false,TIPS.prey));
     b.push(btn("Shadowstep (+Dodge)",`shadowstep(U('${a.id}'))`,false,TIPS.shadowstep));
     b.push(btn("★ Night Terror",`sigNightTerror(U('${a.id}'))`, a.sigDone, TIPS.nightTerror));
+  } else if(a.role==="Iron"){
+    b.push(btn("Lids Up (taunt+shield)",`lidsUp(U('${a.id}'))`,false,TIPS.lidsUp));
+    b.push(btn("Skillet","arm('skillet')",false,TIPS.skillet));
+    b.push(btn("★ Kitchen Sink",`sigKitchenSink(U('${a.id}'))`, a.sigDone, TIPS.kitchenSink));
+  } else if(a.role==="Tape"){
+    b.push(btn("Tape Down (root)","arm('tapeDown')",false,TIPS.tapeDown));
+    b.push(btn("Bind (band root)","arm('bind')",false,TIPS.bind));
+    b.push(btn("Patch (shield)","arm('patch')",false,TIPS.patch));
+    b.push(btn("★ Whole Roll",`sigWholeRoll(U('${a.id}'))`, a.sigDone, TIPS.wholeRoll));
+  } else if(a.role==="Pantry"){
+    b.push(btn("Hot Coffee (fire)","arm('hotCoffee')",false,TIPS.hotCoffee));
+    b.push(btn("Flour Bomb (blind band)","arm('flourBomb')",false,TIPS.flourBomb));
+    b.push(btn("Frozen Turkey (big hit)","arm('frozenTurkey')",false,TIPS.frozenTurkey));
+    b.push(btn("★ Smorgasbord",`sigSmorgasbord(U('${a.id}'))`, a.sigDone, TIPS.smorgasbord));
+  } else if(a.role==="Comfort"){
+    b.push(btn("Chicken Soup (heal+cure)","arm('chickenSoup')",false,TIPS.chickenSoup));
+    b.push(btn("Coffee (extra action)","arm('coffee')",false,TIPS.coffee));
+    b.push(btn("Blanket (shield)","arm('blanket')",false,TIPS.blanket));
+    b.push(btn("★ Sunday Dinner",`sigSundayDinner(U('${a.id}'))`, a.sigDone, TIPS.sundayDinner));
+  } else if(a.role==="Tools"){
+    b.push(btn("Grab a Tool","arm('grabtool')",false,TIPS.grabTool));
+    b.push(btn("Workbench (+Dodge, move)",`workbench(U('${a.id}'))`,false,TIPS.workbench));
+    b.push(btn("★ Power Trip",`sigPowerTrip(U('${a.id}'))`, a.sigDone, TIPS.powerTrip));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -1728,6 +1908,16 @@ function render(){
     ? "Empath: Premonition grants Dodge (foresight), Soothe heals + calms (cleanse). Collective buffs the whole squad."
     : a.role==="Fear"
     ? "Fear: Terrorize a foe so it cowers, then Prey on Fear for big damage vs the Feared. Shadowstep to reposition + Dodge."
+    : a.role==="Iron"
+    ? "Cast-iron tank: Lids Up to Taunt + Barrier, Skillet to bonk + Stagger. Kitchen Sink shields you huge and clobbers the whole warband."
+    : a.role==="Tape"
+    ? "Duct-tape control: Tape Down roots one foe, Bind roots a whole band, Patch shields an ally. Whole Roll mummifies everyone."
+    : a.role==="Pantry"
+    ? "Thrown-food artillery: Hot Coffee burns, Flour Bomb blinds a band, Frozen Turkey is a big single hit. Smorgasbord nukes all three bands."
+    : a.role==="Comfort"
+    ? "Home-remedy support: Chicken Soup heals + cures, Coffee grants an extra action, Blanket shields. Sunday Dinner feeds the whole squad."
+    : a.role==="Tools"
+    ? "Power-tool striker: Grab a Tool — Nail Gun (3 sprays), Chainsaw (bleed), Hammer (stagger), Drill (ignores Barrier). Workbench for Dodge + a free move."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -1841,6 +2031,25 @@ const TIPS = {
   prey:"Prey on Fear — a strike that's devastating against an already-Feared target.",
   shadowstep:"Shadowstep — reposition freely + gain a Dodge.",
   nightTerror:"★ Night Terror (once/expedition) — Fear every enemy and hit the already-Feared hardest.",
+  // Team 7
+  lidsUp:"Lids Up — raise a wall of pots & pans: Taunt every enemy + gain a Barrier.",
+  skillet:"Skillet — heavy cookware bonk that can Stagger.",
+  kitchenSink:"★ Kitchen Sink (once/expedition) — a huge self-Barrier + Taunt, and cookware clobbers every enemy (Stagger).",
+  tapeDown:"Tape Down — pin one enemy in place (Rooted) + chip damage.",
+  bind:"Bind — tape a whole band together: Root + Slow everyone there.",
+  patch:"Patch — slap tape on an ally for a Barrier that soaks damage.",
+  wholeRoll:"★ Whole Roll (once/expedition) — mummify the warband: damage + Root + Slow every enemy.",
+  hotCoffee:"Hot Coffee — scalding splash: Fire damage that can set the enemy Burning.",
+  flourBomb:"Flour Bomb — burst a band in flour: damage + Blind everyone there.",
+  frozenTurkey:"Frozen Turkey — hurl a big frozen bird: heavy single-target hit that can Stagger.",
+  smorgasbord:"★ Smorgasbord (once/expedition) — fling the whole pantry: damage + Blind every enemy.",
+  chickenSoup:"Chicken Soup — heal an ally and soothe their ailments (burn / bleed / poison / sickness / slow).",
+  coffee:"Coffee — caffeinate an ally for an extra action this turn.",
+  blanket:"Blanket — wrap an ally in a warm Barrier.",
+  sundayDinner:"★ Sunday Dinner (once/expedition) — feast: the whole squad heals, gains a Barrier, and is cured.",
+  grabTool:"Grab a Tool — Nail Gun (3 random shots), Chainsaw (Bleed), Hammer (Stagger), or Drill (ignores Barrier).",
+  workbench:"Workbench — duck behind cover: +1 Dodge and a free reposition.",
+  powerTrip:"★ Power Trip (once/expedition) — every power tool at once: damage + Bleed every enemy.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -1917,6 +2126,17 @@ function arm(kind){
   if(kind==="soothe")   S.pending={type:"soothe",actor:a.id,targets:"ally"};
   if(kind==="terrorize")S.pending={type:"terrorize",actor:a.id,targets:"enemy"};
   if(kind==="prey")     S.pending={type:"prey",actor:a.id,targets:"enemy"};
+  if(kind==="skillet")  S.pending={type:"skillet",actor:a.id,targets:"enemy"};
+  if(kind==="tapeDown") S.pending={type:"tapeDown",actor:a.id,targets:"enemy"};
+  if(kind==="bind")     S.pending={type:"bind",actor:a.id};
+  if(kind==="patch")    S.pending={type:"patch",actor:a.id,targets:"ally"};
+  if(kind==="hotCoffee")S.pending={type:"hotCoffee",actor:a.id,targets:"enemy"};
+  if(kind==="flourBomb")S.pending={type:"flourBomb",actor:a.id};
+  if(kind==="frozenTurkey")S.pending={type:"frozenTurkey",actor:a.id,targets:"enemy"};
+  if(kind==="chickenSoup")S.pending={type:"chickenSoup",actor:a.id,targets:"ally"};
+  if(kind==="coffee")   S.pending={type:"coffee",actor:a.id,targets:"ally"};
+  if(kind==="blanket")  S.pending={type:"blanket",actor:a.id,targets:"ally"};
+  if(kind==="grabtool") S.pending={type:"grabtool",actor:a.id,toolPick:true};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -1932,7 +2152,13 @@ function pickBand(i){
   else if(t==="mirrors") hallOfMirrors(a,i);
   else if(t==="suggestion") suggestion(a,i);
   else if(t==="mindquake") mindquake(a,i);
+  else if(t==="bind") bind(a,i);
+  else if(t==="flourBomb") flourBomb(a,i);
 }
+function pickTool(g){ if(!S.pending) return; const a=U(S.pending.actor);
+  S.pending.tool=g; S.pending.toolPick=false;
+  if(g==="Nail Gun"){ grabTool(a,null); return; }   // sprays — needs no target
+  S.pending.targets="enemy"; render(); }
 function pickGun(g){ if(!S.pending) return; const a=U(S.pending.actor);
   if(g==="SMG"){ S.pending.gun="SMG"; takeAim(a,null); return; }   // SMG needs no target
   S.pending.gun=g; S.pending.gunPick=false; S.pending.targets="enemy"; render(); }
@@ -1985,6 +2211,15 @@ function pick(arg){
   if(type==="soothe"){ soothe(a,target); return; }
   if(type==="terrorize"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Terrorize hits Engaged or Near."; return; } terrorize(a,target); return; }
   if(type==="prey"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Prey on Fear hits Engaged or Near."; return; } preyOnFear(a,target); return; }
+  if(type==="skillet"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — the Skillet hits Engaged or Near."; return; } skillet(a,target); return; }
+  if(type==="tapeDown"){ tapeDown(a,target); return; }
+  if(type==="patch"){ patch(a,target); return; }
+  if(type==="hotCoffee"){ hotCoffee(a,target); return; }
+  if(type==="frozenTurkey"){ frozenTurkey(a,target); return; }
+  if(type==="chickenSoup"){ chickenSoup(a,target); return; }
+  if(type==="coffee"){ coffee(a,target); return; }
+  if(type==="blanket"){ blanket(a,target); return; }
+  if(type==="grabtool"){ grabTool(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
