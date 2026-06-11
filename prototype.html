@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:1))))))" title="Cycle to the next squad (1 → … → 7)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:1)))))))" title="Cycle to the next squad (1 → … → 8)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -151,6 +151,11 @@ const HERO_DESC={
   pantry:"Thrown food: scalding coffee, blinding flour, frozen-turkey haymakers.",
   comfort:"Home remedies: heal + cure, an extra-action coffee, cozy Barriers.",
   handyman:"Power-tool menu — nail gun / chainsaw / hammer / drill; squishy & mobile.",
+  paragon:"Invulnerable wall: Brace (−2 to every hit), Taunt, and shrugs off wounds.",
+  glacier:"Ice control — Roots/Slows, freezes foes solid (can't act), walls off a band.",
+  surge:"Lightning — big single bolt that stuns + chains across a whole band. No DoT.",
+  oracle:"Telepath support — heal + cleanse, shield/Dodge buffs, and Confuses one foe.",
+  comet:"Flying striker — Dive Bomb (knockback) + Heat Vision beam; hits from anywhere.",
 };
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
@@ -202,16 +207,23 @@ function team7(){ return [
   { id:"comfort",  name:"Comfort",   role:"Comfort", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"handyman", name:"Handyman",  role:"Tools",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team8(){ return [
+  { id:"paragon",  name:"Paragon",   role:"Invuln",  side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false, stance:false },
+  { id:"glacier",  name:"Glacier",   role:"Ice",     side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"surge",    name:"Surge",     role:"Volt",    side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"oracle",   name:"Oracle",    role:"Mind",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"comet",    name:"Comet",     role:"Fly",     side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -258,7 +270,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -1244,6 +1256,137 @@ function sigPowerTrip(actor){            // Tools sig: every power tool at once
   finishAction(actor);
 }
 
+/* ─── Team 8 actions (the Squadron — classic supers) ──────────────────────── */
+function brace(actor){                    // Invuln: toggle the invulnerable hide (reuses stance soak)
+  actor.stance=!actor.stance;
+  if(actor.stance) log(`${actor.name} sets an invulnerable stance — −2 to every incoming hit, can't be Staggered, but rooted in place and it costs Strain each round.`,"l-root");
+  else log(`${actor.name} drops the brace — mobile again.`,"l-miss");
+  finishAction(actor);
+}
+function shrugOff(actor){                  // Invuln: self-heal + cleanse — "that all you got?"
+  spend(actor,1);
+  const b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+5);
+  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded"].forEach(k=>{ if(actor.st[k]){ actor.st[k]=0; c++; } });
+  log(`${actor.name} shrugs it off — heals ${actor.hp-b}${c?`, shakes off ${c} affliction(s)`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function sigImmovable(actor){              // Invuln sig: the immovable object
+  spend(actor,4); actor.sigDone=true;
+  actor.barrier=(actor.barrier||0)+12; setSt(actor,"taunting",3); actor.hp=Math.min(actor.max,actor.hp+5);
+  log(`${actor.name} becomes IMMOVABLE — Barrier 12, heals 5, and the whole warband must break against him (Taunting).`,"l-root");
+  finishAction(actor);
+}
+function frostbite(actor,target){         // Ice: Root + Slow + chip
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s frost misses ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"Cold"); setSt(target,"rooted",2); setSt(target,"slowed",2); log(`  ${target.name} takes ${t==="full"?3:2} + frozen stiff (Rooted + Slowed).`,"l-root"); }
+  finishAction(actor);
+}
+function flashFreeze(actor,target){       // Ice: freeze one solid — Suppressed (can't act)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} shakes off the frost.`,"l-miss"); finishAction(actor); return; }
+  damage(target,2,"Cold"); setSt(target,"suppressed", t==="full"?2:1);
+  log(target.ctrlImmune ? `  ${target.name} is too massive to freeze solid (takes 2).` : `  ${target.name} is frozen SOLID — Suppressed ${t==="full"?2:1} (can't act).`, target.ctrlImmune?"l-part":"l-root");
+  finishAction(actor);
+}
+function iceWall(actor,band){             // Ice: encase a whole band — chip + Root + Slow
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"Cold"); setSt(e,"rooted",1); setSt(e,"slowed",2); });
+  log(`${actor.name} throws up an ice wall at ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 2 + Rooted + Slowed`:"but there's no one there"}.`,"l-root");
+  finishAction(actor);
+}
+function sigAbsoluteZero(actor){          // Ice sig: flash-freeze the field
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} drops the temperature to ABSOLUTE ZERO:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,3,"Cold"); setSt(e,"rooted",2); setSt(e,"slowed",2); });
+  const prey=liveEnemies().filter(e=>!e.ctrlImmune).sort((a,b)=>a.hp-b.hp)[0];
+  if(prey){ setSt(prey,"suppressed",2); log(`  ${prey.name} is frozen SOLID (Suppressed).`,"l-root"); }
+  finishAction(actor);
+}
+function lightningBolt(actor,target){     // Volt: big single ranged + Stagger (stun)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s bolt forks wide of ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,5,"Lightning"); log(`  ${target.name} takes 5 Lightning.`,"l-part"); }
+  else { damage(target,7,"Lightning"); setSt(target,"stagger",1); log(`  ${target.name} takes 7 Lightning — STUNNED (Staggered).`,"l-hit"); }
+  finishAction(actor);
+}
+function chainLightning(actor,band){      // Volt: arc across a whole band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,3,"Lightning"); });
+  if(hit.length){ const unlucky=hit[Math.floor(Math.random()*hit.length)]; setSt(unlucky,"stagger",1); log(`${actor.name} arcs chain lightning through ${BANDS[band]} — ${hit.length} foe(s) take 3; ${unlucky.name} is Staggered.`,"l-hit"); }
+  else log(`${actor.name} arcs lightning at ${BANDS[band]} — but it's empty.`,"l-miss");
+  finishAction(actor);
+}
+function sigThunderstorm(actor){          // Volt sig: a storm over every band
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} calls down a THUNDERSTORM — lightning rakes every band:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"Lightning"); setSt(e,"stagger",1); log(`  ${e.name} takes 5 + Staggered.`,"l-part"); });
+  finishAction(actor);
+}
+function mindMend(actor,target){          // Mind: heal + cleanse an ally
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+4);
+  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","rooted","feared","confused","charmed"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  log(`${actor.name} mends ${target.name}'s mind & body — heals ${target.hp-b}${c?`, clears ${c} affliction(s)`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function embolden(actor,target){          // Mind: shield + foresight Dodge
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+4; target.dodge=(target.dodge||0)+1;
+  log(`${actor.name} emboldens ${target.name} — Barrier ${target.barrier} + a Dodge (foresight).`,"l-hit");
+  finishAction(actor);
+}
+function mindSpike(actor,target){         // Mind: telepathic Confuse + chip
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${target.name} resists the intrusion.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"Psychic",true); setSt(target,"confused", t==="full"?2:1); log(`  ${target.name} takes ${t==="full"?3:2} (ignores Barrier) + Confused (attacks its own side).`,"l-root"); }
+  finishAction(actor);
+}
+function sigMindLink(actor){              // Mind sig: link the whole squad
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+5); u.dodge=(u.dodge||0)+1; ["burning","bleeding","poison","sickness","slowed","shred","blinded","rooted","feared","confused","charmed"].forEach(k=>{ if(u.st[k]) u.st[k]=0; }); });
+  log(`${actor.name} forms a MIND LINK — the whole squad heals 5, gains a Dodge, and is cleansed.`,"l-hit");
+  finishAction(actor);
+}
+function diveBomb(actor,target){          // Fly: dive in — Crushing + knockback (flies, so any band)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} overshoots ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"Crushing"); log(`  ${target.name} takes 4 Crushing.`,"l-part"); }
+  else { damage(target,5,"Crushing");
+    if(alive(target) && target.band<2 && !target.ctrlImmune){ target.band++; log(`  ${target.name} takes 5 — knocked back to ${BANDS[target.band]}.`,"l-hit"); }
+    else log(`  ${target.name} takes 5 Crushing${target.ctrlImmune?" (too heavy to knock back)":""}.`,"l-hit"); }
+  finishAction(actor);
+}
+function heatVision(actor,target){        // Fly: ranged heat beam — Fire + Burn
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s beam sears past ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?4:3,"Fire"); if(t==="full") setSt(target,"burning",2); log(`  ${target.name} takes ${t==="full"?4:3} Fire${t==="full"?" + Burning":""}.`,"l-fire"); }
+  finishAction(actor);
+}
+function takeFlight(actor){               // Fly: barrel roll — Dodge + free reposition
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} takes to the air — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigMeteorDive(actor,target){     // Fly sig: a meteoric dive onto one foe + splash
+  spend(actor,4); actor.sigDone=true;
+  const groundZero=target.band;
+  damage(target,9,"a METEOR DIVE"); setSt(target,"stagger",1);
+  log(`${actor.name} drops out of the sky in a METEOR DIVE — ${target.name} takes 9 + Staggered.`,"l-hit");
+  liveEnemies().filter(e=>e!==target && e.band===groundZero).forEach(e=>{ damage(e,3,"the shockwave"); log(`  ${e.name} is caught in the shockwave: 3.`,"l-part"); });
+  if(alive(target) && target.band<2 && !target.ctrlImmune){ target.band++; log(`  ${target.name} is hurled back to ${BANDS[target.band]}.`,"l-hit"); }
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -1457,7 +1600,7 @@ function endOfRound(){
   S.units.filter(alive).forEach(u=>{
     if(u.stance || u.well){ u.strain++;
       if(u.strain>u.resolve){ u.strain=u.resolve;
-        if(u.stance){ u.stance=false; log(`  ${u.name} can't sustain the metal — it sloughs off.`,"l-bad"); }
+        if(u.stance){ u.stance=false; log(`  ${u.name} can't sustain the ${u.role==="Invuln"?"brace — it breaks":"metal — it sloughs off"}.`,"l-bad"); }
         if(u.well){ u.well=false; S.well=-1; log(`  ${u.name} can't hold the well — it collapses.`,"l-bad"); }
       } else log(`  ${u.name} sustains (Strain ${u.strain}/${u.resolve}).`,"l-miss"); }
   });
@@ -1497,7 +1640,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:1)))));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:1))))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -1520,7 +1663,7 @@ function unitCard(u){
     if(u.st.slowed)  chips.push(chip("slowed",`Slowed ${u.st.slowed}`,"Slowed — loses its advance this turn and takes −1 to attacks."));
     if(u.st.burning) chips.push(chip("burning",`Burning ${u.st.burning}`,"Burning — 3 fire damage at end of round. (Fire-affinity units are immune.)"));
     if(u.st.stagger) chips.push(chip("stagger","Staggered","Staggered — loses its next action."));
-    if(u.stance)     chips.push(chip("armor","⛨ Metal · Armored","Stance: Metal — −2 to every incoming hit and immune to Stagger, but Heavy (can't move) and costs Strain each round."));
+    if(u.stance)     chips.push(chip("armor",`⛨ ${u.role==="Invuln"?"Braced":"Metal"} · Armored`,"Armored — −2 to every incoming hit and immune to Stagger, but can't move and costs Strain each round."));
     if(u.st.taunting)chips.push(chip("taunt",`⚑ Taunting ${u.st.taunting}`,"Taunting — every enemy must attack this unit."));
     if(u.st.regen)   chips.push(chip("regen",`✚ Regenerating ${u.st.regen}`,"Regenerating — heals 3 HP at end of round. Suppressed (Cauterized) while Burning or standing in fire."));
     if(u.st.bleeding)chips.push(chip("bleed",`🩸 Bleeding ${u.st.bleeding}`,"Bleeding — 2 damage at end of round."));
@@ -1594,7 +1737,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -1606,6 +1749,8 @@ function render(){
         : pt==="mindquake" ? "Choose a band to mindquake (psychic damage, ignores Barriers):"
         : pt==="bind" ? "Choose a band to tape together (Root + Slow everyone there):"
         : pt==="flourBomb" ? "Choose a band to flour-bomb (damage + Blind everyone there):"
+        : pt==="icewall" ? "Choose a band to wall off in ice (damage + Root + Slow everyone there):"
+        : pt==="chain" ? "Choose a band to arc chain lightning through (hits every enemy there):"
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -1683,6 +1828,15 @@ function render(){
         : pt==="coffee" ? "Click an ally to give an extra action."
         : pt==="blanket" ? "Click an ally to wrap in a Barrier Blanket."
         : pt==="grabtool" ? `Click an enemy to use the ${S.pending.tool}.`
+        : pt==="frostbite" ? "Click any enemy to Frostbite (Root + Slow)."
+        : pt==="flashfreeze" ? "Click any enemy to Flash Freeze solid (can't act)."
+        : pt==="bolt" ? "Click any enemy to hit with a Lightning Bolt (stun)."
+        : pt==="mindmend" ? "Click an ally to Mind-Mend (heal + cleanse)."
+        : pt==="embolden" ? "Click an ally to Embolden (Barrier + Dodge)."
+        : pt==="mindspike" ? "Click any enemy to Mind Spike (ignores Barrier + Confuse)."
+        : pt==="dive" ? "Click any enemy to Dive Bomb (knockback) — flying reaches any band."
+        : pt==="heat" ? "Click any enemy to sear with Heat Vision."
+        : pt==="meteor" ? "Click any enemy to drop a Meteor Dive on (splashes its band)."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -1846,6 +2000,30 @@ function render(){
     b.push(btn("Grab a Tool","arm('grabtool')",false,TIPS.grabTool));
     b.push(btn("Workbench (+Dodge, move)",`workbench(U('${a.id}'))`,false,TIPS.workbench));
     b.push(btn("★ Power Trip",`sigPowerTrip(U('${a.id}'))`, a.sigDone, TIPS.powerTrip));
+  } else if(a.role==="Invuln"){
+    b.push(`<button class="${a.stance?"primary":""}" title="${TIPS.brace}" onclick="brace(U('${a.id}'))">${a.stance?"Drop Brace":"Brace (armor up)"}</button>`);
+    b.push(btn("Taunt",`taunt(U('${a.id}'))`, a.st.taunting>0, TIPS.taunt));
+    b.push(btn("Shrug It Off (heal+cleanse)",`shrugOff(U('${a.id}'))`,false,TIPS.shrugOff));
+    b.push(btn("★ Immovable",`sigImmovable(U('${a.id}'))`, a.sigDone, TIPS.immovable));
+  } else if(a.role==="Ice"){
+    b.push(btn("Frostbite (root+slow)","arm('frostbite')",false,TIPS.frostbite));
+    b.push(btn("Flash Freeze (lock)","arm('flashfreeze')",false,TIPS.flashFreeze));
+    b.push(btn("Ice Wall (freeze band)","arm('icewall')",false,TIPS.iceWall));
+    b.push(btn("★ Absolute Zero",`sigAbsoluteZero(U('${a.id}'))`, a.sigDone, TIPS.absoluteZero));
+  } else if(a.role==="Volt"){
+    b.push(btn("Lightning Bolt (stun)","arm('bolt')",false,TIPS.lightningBolt));
+    b.push(btn("Chain Lightning (band)","arm('chain')",false,TIPS.chainLightning));
+    b.push(btn("★ Thunderstorm",`sigThunderstorm(U('${a.id}'))`, a.sigDone, TIPS.thunderstorm));
+  } else if(a.role==="Mind"){
+    b.push(btn("Mind-Mend (heal+cleanse)","arm('mindmend')",false,TIPS.mindMend));
+    b.push(btn("Embolden (shield+dodge)","arm('embolden')",false,TIPS.embolden));
+    b.push(btn("Mind Spike (confuse)","arm('mindspike')",false,TIPS.mindSpike));
+    b.push(btn("★ Mind Link",`sigMindLink(U('${a.id}'))`, a.sigDone, TIPS.mindLink));
+  } else if(a.role==="Fly"){
+    b.push(btn("Dive Bomb (knockback)","arm('dive')",false,TIPS.diveBomb));
+    b.push(btn("Heat Vision (beam)","arm('heat')",false,TIPS.heatVision));
+    b.push(btn("Barrel Roll (+Dodge, move)",`takeFlight(U('${a.id}'))`,false,TIPS.takeFlight));
+    b.push(btn("★ Meteor Dive","arm('meteor')", a.sigDone, TIPS.meteorDive));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -1918,6 +2096,16 @@ function render(){
     ? "Home-remedy support: Chicken Soup heals + cures, Coffee grants an extra action, Blanket shields. Sunday Dinner feeds the whole squad."
     : a.role==="Tools"
     ? "Power-tool striker: Grab a Tool — Nail Gun (3 sprays), Chainsaw (bleed), Hammer (stagger), Drill (ignores Barrier). Workbench for Dodge + a free move."
+    : a.role==="Invuln"
+    ? "Invulnerable wall: Brace to shed −2 off every hit (can't move while braced), Taunt to pull the warband onto you, Shrug It Off to heal + cleanse. The classic unkillable tank."
+    : a.role==="Ice"
+    ? "Ice controller: Frostbite Roots + Slows one, Flash Freeze locks a foe SOLID (can't act), Ice Wall freezes a whole band. Brutes are too massive to freeze solid."
+    : a.role==="Volt"
+    ? "Lightning artillery: big single Bolt that STUNS (Staggers), or Chain Lightning across a band. Pure burst, no DoT — squishy, stay at the back."
+    : a.role==="Mind"
+    ? "Telepath support: Mind-Mend heals + cleanses, Embolden shields + grants Dodge, Mind Spike Confuses a foe (it'll turn on its own side). Mind Link does it all for the squad."
+    : a.role==="Fly"
+    ? "Flying striker: Dive Bomb (melee + knockback) and Heat Vision (ranged beam) reach ANY band — hit, then Barrel Roll to reposition with a Dodge. Squishy but mobile."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -2050,6 +2238,25 @@ const TIPS = {
   grabTool:"Grab a Tool — Nail Gun (3 random shots), Chainsaw (Bleed), Hammer (Stagger), or Drill (ignores Barrier).",
   workbench:"Workbench — duck behind cover: +1 Dodge and a free reposition.",
   powerTrip:"★ Power Trip (once/expedition) — every power tool at once: damage + Bleed every enemy.",
+  // Team 8
+  brace:"Brace — invulnerable stance: −2 to every incoming hit and immune to Stagger, but you can't move and it costs Strain each round.",
+  shrugOff:"Shrug It Off — heal yourself and shake off afflictions (burn / bleed / poison / sickness / slow / shred / blind).",
+  immovable:"★ Immovable (once/expedition) — a huge self-Barrier + heal + Taunt the whole warband onto you.",
+  frostbite:"Frostbite — Cold strike that Roots + Slows the enemy.",
+  flashFreeze:"Flash Freeze — freeze one enemy SOLID (Suppressed — can't act). Brutes are too massive.",
+  iceWall:"Ice Wall — encase a whole band in ice: damage + Root + Slow everyone there.",
+  absoluteZero:"★ Absolute Zero (once/expedition) — Root + Slow every enemy and freeze the weakest one SOLID.",
+  lightningBolt:"Lightning Bolt — big single ranged hit that STUNS (Staggers) on a clean strike.",
+  chainLightning:"Chain Lightning — arc through a whole band; one caught enemy is Staggered.",
+  thunderstorm:"★ Thunderstorm (once/expedition) — lightning rakes every band: damage + Stagger every enemy.",
+  mindMend:"Mind-Mend — heal an ally and clear their afflictions (including mind effects).",
+  embolden:"Embolden — give an ally a Barrier and a Dodge (foresight).",
+  mindSpike:"Mind Spike — psychic stab that ignores Barrier and Confuses the enemy (it attacks its own side).",
+  mindLink:"★ Mind Link (once/expedition) — the whole squad heals, gains a Dodge, and is cleansed.",
+  diveBomb:"Dive Bomb — fly in for a Crushing hit that knocks the enemy back a band (reaches any band).",
+  heatVision:"Heat Vision — ranged heat beam (any band): Fire damage that can set the enemy Burning.",
+  takeFlight:"Barrel Roll — take to the air: +1 Dodge and a free reposition.",
+  meteorDive:"★ Meteor Dive (once/expedition) — drop on one foe for huge damage + Stagger + knockback, with a shockwave that splashes its band.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -2137,6 +2344,17 @@ function arm(kind){
   if(kind==="coffee")   S.pending={type:"coffee",actor:a.id,targets:"ally"};
   if(kind==="blanket")  S.pending={type:"blanket",actor:a.id,targets:"ally"};
   if(kind==="grabtool") S.pending={type:"grabtool",actor:a.id,toolPick:true};
+  if(kind==="frostbite")S.pending={type:"frostbite",actor:a.id,targets:"enemy"};
+  if(kind==="flashfreeze")S.pending={type:"flashfreeze",actor:a.id,targets:"enemy"};
+  if(kind==="icewall")  S.pending={type:"icewall",actor:a.id};
+  if(kind==="bolt")     S.pending={type:"bolt",actor:a.id,targets:"enemy"};
+  if(kind==="chain")    S.pending={type:"chain",actor:a.id};
+  if(kind==="mindmend") S.pending={type:"mindmend",actor:a.id,targets:"ally"};
+  if(kind==="embolden") S.pending={type:"embolden",actor:a.id,targets:"ally"};
+  if(kind==="mindspike")S.pending={type:"mindspike",actor:a.id,targets:"enemy"};
+  if(kind==="dive")     S.pending={type:"dive",actor:a.id,targets:"enemy"};
+  if(kind==="heat")     S.pending={type:"heat",actor:a.id,targets:"enemy"};
+  if(kind==="meteor")   S.pending={type:"meteor",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -2154,6 +2372,8 @@ function pickBand(i){
   else if(t==="mindquake") mindquake(a,i);
   else if(t==="bind") bind(a,i);
   else if(t==="flourBomb") flourBomb(a,i);
+  else if(t==="icewall") iceWall(a,i);
+  else if(t==="chain") chainLightning(a,i);
 }
 function pickTool(g){ if(!S.pending) return; const a=U(S.pending.actor);
   S.pending.tool=g; S.pending.toolPick=false;
@@ -2220,6 +2440,15 @@ function pick(arg){
   if(type==="coffee"){ coffee(a,target); return; }
   if(type==="blanket"){ blanket(a,target); return; }
   if(type==="grabtool"){ grabTool(a,target); return; }
+  if(type==="frostbite"){ frostbite(a,target); return; }
+  if(type==="flashfreeze"){ flashFreeze(a,target); return; }
+  if(type==="bolt"){ lightningBolt(a,target); return; }
+  if(type==="mindmend"){ mindMend(a,target); return; }
+  if(type==="embolden"){ embolden(a,target); return; }
+  if(type==="mindspike"){ mindSpike(a,target); return; }
+  if(type==="dive"){ diveBomb(a,target); return; }
+  if(type==="heat"){ heatVision(a,target); return; }
+  if(type==="meteor"){ sigMeteorDive(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
