@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:1))))))))))" title="Cycle to the next squad (1 → … → 11)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:1)))))))))))" title="Cycle to the next squad (1 → … → 12)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -171,6 +171,11 @@ const HERO_DESC={
   stretch:"Elastic artillery — long-range stretched-punch nukes with knockback.",
   herald:"Buffer/displacer support — NO heals: shields, extra actions, and moves enemies.",
   dash:"Super-speed striker — 3-hit blurs and self extra-actions (Blitz). Fast, fragile.",
+  blight:"Plague tank — Screams to Taunt, then infects the front with spreading Plague.",
+  mimic:"Mask controller — steals an enemy's own trick and turns it on them; confuses + hides.",
+  nitro:"Explosives artillery — grenade frags + cluster bombs; Barrage hits all but staggers him.",
+  mojo:"Shaman support — heals via offense: Venom on enemies, and every tick mends your squad.",
+  kage:"Ninja striker — throws shuriken and Vanishes (untargetable); strikes hardest from stealth.",
 };
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
@@ -250,16 +255,23 @@ function team11(){ return [   // the Vanguard — classic-comics grab-bag
   { id:"herald",   name:"Herald",    role:"Marshal", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"dash",     name:"Dash",      role:"Speed",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team12(){ return [   // the Wildcards — an eclectic crew
+  { id:"blight",   name:"Blight",    role:"Pox",     side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"mimic",    name:"Mimic",     role:"Mask",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"nitro",    name:"Nitro",     role:"Demo",    side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"mojo",     name:"Mojo",      role:"Shaman",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"kage",     name:"Kage",      role:"Ninja",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===11?team11():team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===12?team12():team===11?team11():team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10(),team11()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10(),team11(),team12()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -307,7 +319,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===11 ? "TEAM 11 (the Vanguard — Rampart, Cyclone, Stretch, Herald, Dash)" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===12 ? "TEAM 12 (the Wildcards — Blight, Mimic, Nitro, Mojo, Kage)" : team===11 ? "TEAM 11 (the Vanguard — Rampart, Cyclone, Stretch, Herald, Dash)" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -1809,6 +1821,158 @@ function sigOverdrive(actor){              // Speed sig: blur across the field +
   finishAction(actor);
 }
 
+/* ─── Team 12 actions (the Wildcards) ─────────────────────────────────────── */
+// Blight — plague tank
+function plagueScream(actor){             // Pox: Taunt all + infect the front with Plague
+  spend(actor,1);
+  setSt(actor,"taunting",2);
+  const hit=liveEnemies().filter(e=>e.band===actor.band);
+  hit.forEach(e=>{ if(!e.st.plague) setSt(e,"plague",1); });
+  log(`${actor.name} lets out a putrid SCREAM — Taunting, and ${hit.length?`infects ${hit.length} foe(s) at ${BANDS[actor.band]} with Plague ☣`:"but nothing's close enough to infect"}.`,"l-root");
+  finishAction(actor);
+}
+function festeringBlow(actor,target){     // Pox: melee + Plague
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s rotten swing misses ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?4:3,"a festering blow"); if(!target.st.plague) setSt(target,"plague",1); log(`  ${target.name} takes ${t==="full"?4:3} + Plague. ☣`,t==="full"?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function rottenHide(actor){               // Pox: thick rotten hide — Guarded (halve damage)
+  spend(actor,1);
+  setSt(actor,"guard",2);
+  log(`${actor.name} swells behind a thick rotten hide — Guarded (incoming damage halved, 2 rounds).`,"l-root");
+  finishAction(actor);
+}
+function sigPandemic(actor){              // Pox sig: infect everyone + taunt + self-heal
+  spend(actor,4); actor.sigDone=true;
+  setSt(actor,"taunting",3); const b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+6);
+  liveEnemies().forEach(e=>{ damage(e,2,"the Pandemic"); if(!e.st.plague) setSt(e,"plague",1); });
+  log(`${actor.name} unleashes a PANDEMIC — Taunting, heals ${actor.hp-b}, and every enemy is infected with Plague. ☣`,"l-bad");
+  finishAction(actor);
+}
+// Mimic — the mask that steals tricks
+function stealMove(actor,target){         // Mask: copy the enemy's signature trick and turn it on them
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} can't catch ${target.name}'s face.`,"l-miss"); finishAction(actor); return; }
+  const full=(t==="full"), r=target.role;
+  log(`${actor.name} dons ${target.name}'s face and turns its own trick against it:`,"l-root");
+  if(r==="caster"){ damage(target,full?4:3,"stolen fire"); setSt(target,"burning",2); log(`  → ${full?4:3} Fire + Burning.`,"l-fire"); }
+  else if(r==="binder"){ damage(target,full?3:2,"stolen frost"); setSt(target,"slowed",2); log(`  → ${full?3:2} + Slowed.`,"l-root"); }
+  else if(r==="plague"){ damage(target,full?3:2,"stolen rot"); if(!target.st.plague) setSt(target,"plague",1); log(`  → ${full?3:2} + Plague. ☣`,"l-bad"); }
+  else if(r==="brute"||target.boss){ damage(target,full?6:4,"a stolen haymaker"); if(full && alive(target) && target.band<2 && !target.ctrlImmune){ target.band++; log(`  → ${full?6:4} Crushing, knocked to ${BANDS[target.band]}.`,"l-hit"); } else log(`  → ${full?6:4} Crushing.`,"l-hit"); }
+  else if(r==="disruptor"){ const had=(target.barrier||0)>0; target.barrier=0; damage(target,full?4:3,"a stolen disruption"); log(`  → ${full?4:3}${had?" + stripped its Barrier":""}.`,"l-part"); }
+  else if(r==="mender"||r==="alpha"){ const steal=Math.min(target.barrier||0,5); if(steal>0){ target.barrier-=steal; actor.barrier=(actor.barrier||0)+steal; } damage(target,full?4:3,"a stolen channel"); log(`  → ${full?4:3}${steal>0?` + stole ${steal} Barrier`:""}.`,"l-part"); }
+  else { damage(target,full?5:3,"a stolen strike"); if(full) setSt(target,"stagger",1); log(`  → ${full?5:3}${full?" + Staggered":""}.`,full?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function mockery(actor,band){             // Mask: sow confusion across a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"mockery"); setSt(e,"confused",1); });
+  log(`${actor.name} flashes a dozen faces at ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 2 + Confused (turn on their own side)`:"no one to fool"}.`,"l-root");
+  finishAction(actor);
+}
+function secondFace(actor){               // Mask: blend in — Hidden + Dodge
+  spend(actor,1);
+  setSt(actor,"hidden",1); actor.dodge=(actor.dodge||0)+1;
+  log(`${actor.name} slips on a blank face and melts into the crowd — Hidden (untargetable) + a Dodge.`,"l-hit");
+  finishAction(actor);
+}
+function sigThousandFaces(actor){         // Mask sig: mass confuse
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} becomes a thing of a THOUSAND FACES — the warband turns on itself:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,3,"a thousand faces"); setSt(e,"confused",2); log(`  ${e.name} takes 3 + Confused.`,"l-part"); });
+  finishAction(actor);
+}
+// Nitro — explosives
+function frag(actor,target){              // Demo: a frag grenade — single hit + splash to its band
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s grenade bounces wide of ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  const d=t==="full"?5:4; const gz=target.band; damage(target,d,"a frag grenade"); log(`  ${target.name} takes ${d}.`,t==="full"?"l-hit":"l-part");
+  liveEnemies().filter(e=>e!==target && e.band===gz).forEach(e=>{ damage(e,2,"shrapnel"); log(`  ${e.name} is caught in the blast: 2.`,"l-part"); });
+  finishAction(actor);
+}
+function cluster(actor,band){             // Demo: grenades across a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,3,"a cluster of grenades"); });
+  log(`${actor.name} lobs a cluster of grenades into ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 3`:"empty ground"}.`,"l-part");
+  finishAction(actor);
+}
+function sigBarrage(actor){               // Demo sig: a full barrage — hits all, then tires him out
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} cuts loose a full BARRAGE of explosions:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"the Barrage"); log(`  ${e.name} takes 5.`,"l-part"); });
+  setSt(actor,"stagger",1);
+  log(`  ${actor.name} is winded by the recoil — Staggered (loses next turn).`,"l-bad");
+  finishAction(actor);
+}
+// Mojo — the shaman who heals through venom
+function venomDart(actor,target){         // Shaman: Venom — a DoT whose every tick mends the squad
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s dart misses ${target.name}.`,"l-miss"); }
+  else { damage(target,2,"a venom dart"); setSt(target,"venom", t==="full"?3:2); log(`  ${target.name} takes 2 + Venom ${t==="full"?3:2} (its suffering will mend your squad each round).`,"l-bad"); }
+  finishAction(actor);
+}
+function swarm(actor,band){               // Shaman: Venom a whole band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,1,"a venom swarm"); setSt(e,"venom",2); });
+  log(`${actor.name} sends a biting swarm into ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) Venomed`:"nothing to bite"}.`,"l-bad");
+  finishAction(actor);
+}
+function spiritWard(actor,target){        // Shaman: a spirit barrier + cleanse (no direct heal — that's what venom is for)
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+4;
+  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","plague"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  log(`${actor.name} wreathes ${target.name} in warding spirits — Barrier ${target.barrier}${c?`, cleanses ${c} affliction(s)`:""}.`,"l-hit");
+  finishAction(actor);
+}
+function sigVenomBurst(actor){            // Shaman sig: Venom the whole field — massive team sustain
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} bursts a cloud of VENOM across the field:`,"l-bad");
+  liveEnemies().forEach(e=>{ damage(e,2,"the Venom Burst"); setSt(e,"venom",3); log(`  ${e.name} takes 2 + Venom 3.`,"l-part"); });
+  finishAction(actor);
+}
+// Kage — the ninja
+function shuriken(actor,target){          // Ninja: throw stars (ranged, any band) + Bleed
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s stars miss ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?4:3,"shuriken"); if(t==="full") setSt(target,"bleeding",2); log(`  ${target.name} takes ${t==="full"?4:3}${t==="full"?" + Bleeding":""}.`,t==="full"?"l-hit":"l-part"); }
+  if(actor.st.hidden){ actor.st.hidden=0; log(`  ${actor.name} breaks cover with the throw.`,"l-miss"); }
+  finishAction(actor);
+}
+function shadowStrike(actor,target){      // Ninja: melee — devastating from stealth (consumes Hidden)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const hidden=actor.st.hidden>0;
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s strike finds only air.`,"l-miss"); if(hidden) actor.st.hidden=0; finishAction(actor); return; }
+  let d=t==="full"?5:3; if(hidden) d+=3;
+  damage(target,d,hidden?"a Shadow Strike from nowhere":"a strike"); if(t==="full") setSt(target,"bleeding",2);
+  log(`  ${target.name} takes ${d}${hidden?" — struck from the shadows!":""}${t==="full"?" + Bleeding":""}.`,(hidden||t==="full")?"l-hit":"l-part");
+  if(hidden){ actor.st.hidden=0; log(`  ${actor.name} reappears.`,"l-miss"); }
+  finishAction(actor);
+}
+function vanish(actor){                    // Ninja: go invisible — Hidden + Dodge
+  spend(actor,1);
+  setSt(actor,"hidden",2); actor.dodge=(actor.dodge||0)+1;
+  log(`${actor.name} vanishes in a puff of smoke — Hidden (immune to targeted attacks; zones still hit) + a Dodge.`,"l-hit");
+  finishAction(actor);
+}
+function sigThousandCuts(actor){          // Ninja sig: a storm of steel, then gone
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} becomes a whirlwind of steel — DEATH BY A THOUSAND CUTS:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,4,"a thousand cuts"); setSt(e,"bleeding",2); log(`  ${e.name} takes 4 + Bleeding.`,"l-part"); });
+  setSt(actor,"hidden",2); actor.dodge=(actor.dodge||0)+1;
+  log(`  ${actor.name} vanishes again — Hidden + a Dodge.`,"l-hit");
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -1978,6 +2142,9 @@ function endOfRound(){
     if(u.st.bleeding){ damage(u,2,"Bleeding"); log(`  ${u.name} bleeds for 2.`,"l-bad"); }
     if(u.st.sickness){ damage(u,u.st.sickness,"radiation sickness"); log(`  ${u.name} sickens for ${u.st.sickness} (stacks).`,"l-fire"); }
     if(u.st.poison){ damage(u,2,"poison"); log(`  ${u.name} suffers poison: 2.`,"l-part"); }
+    if(u.st.venom){ damage(u,2,"venom");                 // Shaman's Venom — DoT on a foe; each tick mends the squad
+      let healed=0; if(u.side==="enemy") liveParty().forEach(a=>{ if(a.hp<a.max){ a.hp=Math.min(a.max,a.hp+1); healed++; } });
+      log(`  ${u.name} writhes with Venom: 2${healed?` — the squad is mended (+1 to ${healed})`:""}.`,"l-bad"); }
     if(u.st.doom){ u.st.doom--;                          // Curse of Doom — counts down, then detonates
       if(u.st.doom<=0){ u.st.doom=0; damage(u,8,"the Curse of Doom",true); log(`  ${u.name}'s CURSE OF DOOM detonates for 8! ☠`,"l-bad"); }
       else log(`  ${u.name} is cursed — Doom detonates in ${u.st.doom}.`,"l-root"); }
@@ -2057,7 +2224,7 @@ function endOfRound(){
   S.glass=S.glass.map(n=>Math.max(0,n-1));
   S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
   S.units.forEach(u=>{ u._hit=false; });                                        // reset per-round "was hit" (Gloop regen)
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison","confused","leeching","feared","charmed","hidden","guard"].forEach(k=>{
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison","venom","confused","leeching","feared","charmed","hidden","guard"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });   // NOTE: Sickness is NOT here — it compounds all fight (cleanse to clear)
 
   // win/lose
@@ -2087,7 +2254,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:1)))))))));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:1))))))))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -2122,6 +2289,7 @@ function unitCard(u){
     if(u.st.poison)chips.push(chip("bleed",`☠ Poison ${u.st.poison}`,"Poison — takes 2 damage each round."));
     if(u.st.doom)chips.push(chip("rooted",`☠ Doom ${u.st.doom}`,`Curse of Doom — detonates for 8 damage (ignores Barrier) when the countdown hits 0, in ${u.st.doom} round(s).`));
     if(u.st.plague)chips.push(chip("fire",`☣ Plague`,"Plague — 2 damage each round, and spreads to one un-infected unit in the SAME band. Burns out if it can't infect anyone. Spread out or cleanse to stop it."));
+    if(u.st.venom)chips.push(chip("bleed",`☣ Venom ${u.st.venom}`,"Venom (Shaman's healing curse) — 2 damage each round, and every tick mends the squad that inflicted it (+1 HP to each wounded ally). Cleanse to deny the sustain."));
     if(u.st.confused)chips.push(chip("taunt",`🌀 Confused ${u.st.confused}`,"Confused — on its turn it attacks its own side (or itself) instead of you."));
     if(u.st.leeching)chips.push(chip("bleed",`🦟 Leeching ${u.st.leeching}`,"Leeching — takes 2 each round and heals the Siphon for 2."));
     if(u.extraActs>0)chips.push(chip("stoked",`⏩ Hasted ${u.extraActs}`,`Hasted — has ${u.extraActs} extra action(s) this turn.`));
@@ -2187,7 +2355,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"||pt==="twister"||pt==="windmill"||(pt==="reposition"&&S.pending.bandPick)){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"||pt==="twister"||pt==="windmill"||pt==="mockery"||pt==="cluster"||pt==="swarm"||(pt==="reposition"&&S.pending.bandPick)){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -2207,6 +2375,9 @@ function render(){
         : pt==="shredsolo" ? "Choose a band to shred with a solo (damage + Shred everyone there):"
         : pt==="twister" ? "Choose a band to hit with a Twister (scatters everyone there to random bands):"
         : pt==="windmill" ? "Choose a band to windmill (hits every enemy there):"
+        : pt==="mockery" ? "Choose a band to mock (damage + Confuse everyone there):"
+        : pt==="cluster" ? "Choose a band to carpet with cluster grenades:"
+        : pt==="swarm" ? "Choose a band to Venom (each tick heals your squad):"
         : pt==="reposition" ? `Send ${(U(S.pending.foe)||{name:"the foe"}).name} to which band?`
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
@@ -2317,6 +2488,13 @@ function render(){
         : pt==="reposition" ? "Click any enemy to pick up and reposition."
         : pt==="rapid" ? "Click an enemy at Engaged or Near for Rapid Strikes."
         : pt==="hitrun" ? "Click an enemy at Engaged or Near for Hit & Run."
+        : pt==="festering" ? "Click an enemy at Engaged or Near for a Festering Blow (+Plague)."
+        : pt==="steal" ? "Click any enemy to Steal its move and turn it on it."
+        : pt==="frag" ? "Click any enemy to hit with a Frag grenade (splashes its band)."
+        : pt==="venomdart" ? "Click any enemy to Venom (each tick heals your squad)."
+        : pt==="spiritward" ? "Click an ally to shield + cleanse with a Spirit Ward."
+        : pt==="shuriken" ? "Click any enemy to throw Shuriken at."
+        : pt==="shadowstrike" ? "Click an enemy at Engaged or Near for a Shadow Strike."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -2575,6 +2753,30 @@ function render(){
     b.push(btn("Blitz (extra action)",`blitz(U('${a.id}'))`,false,TIPS.blitz));
     b.push(btn("Hit & Run (strike+slip)","arm('hitrun')",false,TIPS.hitAndRun));
     b.push(btn("★ Overdrive",`sigOverdrive(U('${a.id}'))`, a.sigDone, TIPS.overdrive));
+  } else if(a.role==="Pox"){
+    b.push(btn("Plague Scream (taunt+infect)",`plagueScream(U('${a.id}'))`, a.st.taunting>0, TIPS.plagueScream));
+    b.push(btn("Festering Blow (+Plague)","arm('festering')",false,TIPS.festeringBlow));
+    b.push(btn("Rotten Hide (halve damage)",`rottenHide(U('${a.id}'))`,false,TIPS.rottenHide));
+    b.push(btn("★ Pandemic",`sigPandemic(U('${a.id}'))`, a.sigDone, TIPS.pandemic));
+  } else if(a.role==="Mask"){
+    b.push(btn("Steal Move (copy a foe)","arm('steal')",false,TIPS.stealMove));
+    b.push(btn("Mockery (confuse band)","arm('mockery')",false,TIPS.mockery));
+    b.push(btn("Second Face (go Hidden)",`secondFace(U('${a.id}'))`,false,TIPS.secondFace));
+    b.push(btn("★ Thousand Faces",`sigThousandFaces(U('${a.id}'))`, a.sigDone, TIPS.thousandFaces));
+  } else if(a.role==="Demo"){
+    b.push(btn("Frag (single + splash)","arm('frag')",false,TIPS.frag));
+    b.push(btn("Cluster (band)","arm('cluster')",false,TIPS.cluster));
+    b.push(btn("★ Barrage (all, self-stagger)",`sigBarrage(U('${a.id}'))`, a.sigDone, TIPS.barrage));
+  } else if(a.role==="Shaman"){
+    b.push(btn("Venom Dart (heal via DoT)","arm('venomdart')",false,TIPS.venomDart));
+    b.push(btn("Swarm (venom band)","arm('swarm')",false,TIPS.swarm));
+    b.push(btn("Spirit Ward (shield+cleanse)","arm('spiritward')",false,TIPS.spiritWard));
+    b.push(btn("★ Venom Burst",`sigVenomBurst(U('${a.id}'))`, a.sigDone, TIPS.venomBurst));
+  } else if(a.role==="Ninja"){
+    b.push(btn("Shuriken (ranged + bleed)","arm('shuriken')",false,TIPS.shuriken));
+    b.push(btn("Shadow Strike (stealth bonus)","arm('shadowstrike')",false,TIPS.shadowStrike));
+    b.push(btn("Vanish (go invisible)",`vanish(U('${a.id}'))`,false,TIPS.vanish));
+    b.push(btn("★ Thousand Cuts",`sigThousandCuts(U('${a.id}'))`, a.sigDone, TIPS.thousandCuts));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -2687,6 +2889,16 @@ function render(){
     ? "Buffer/displacer — NO heals. Fortify shields + Dodges an ally, Charge gives an ally an extra action, Reposition picks up an enemy and drops it in any zone. Rout shields all + hurls the enemy back."
     : a.role==="Speed"
     ? "Super-speed striker: Rapid Strikes lands 3 fast hits on one foe; Blitz gives YOU an extra action (chain your turns); Hit & Run strikes then slips. Fast and fragile — never get cornered."
+    : a.role==="Pox"
+    ? "Plague tank: Scream to Taunt the warband onto you, then infect the cluster (Plague spreads band-by-band). Festering Blow adds Plague; Rotten Hide halves your incoming. Pandemic infects everyone."
+    : a.role==="Mask"
+    ? "Mask controller: Steal Move copies the targeted enemy's OWN trick and turns it on it (fire/slow/plague/big hit, by foe type). Mockery confuses a band; Second Face hides you. The ultimate adapts to who you face."
+    : a.role==="Demo"
+    ? "Explosives artillery: Frag is a single hit + shrapnel splash; Cluster carpets a band. Barrage hits everyone — but the recoil Staggers Nitro for his next turn, so time it. Squishy: stay back."
+    : a.role==="Shaman"
+    ? "Shaman support: it heals through OFFENSE — Venom an enemy and every tick mends your squad (+1 to each wounded ally). Swarm venoms a band; Spirit Ward shields + cleanses. Keep venom on the field to keep the squad topped up."
+    : a.role==="Ninja"
+    ? "Ninja striker: Vanish to go untargetable (zones still hit), then Shadow Strike for big bonus damage from stealth. Shuriken hits any band but breaks cover. Hit-and-hide, repeat."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -2895,6 +3107,26 @@ const TIPS = {
   blitz:"Blitz — move so fast you gain an extra action this turn (chain another move).",
   hitAndRun:"Hit & Run — strike a foe, then blur away: +1 Dodge and a free reposition.",
   overdrive:"★ Overdrive (once/expedition) — blur across the whole field damaging every enemy, then gain an extra action.",
+  // Team 12 (the Wildcards)
+  plagueScream:"Plague Scream — Taunt every enemy, and infect any foe in your band with Plague (it spreads band-by-band).",
+  festeringBlow:"Festering Blow — melee strike that infects the enemy with Plague.",
+  rottenHide:"Rotten Hide — Guarded: your incoming damage is halved for 2 rounds.",
+  pandemic:"★ Pandemic (once/expedition) — Taunt, heal yourself, and infect EVERY enemy with Plague.",
+  stealMove:"Steal Move — copy the targeted enemy's own trick and turn it on it (fire+burn / slow / plague / big hit / strip shield, by enemy type).",
+  mockery:"Mockery — flash false faces at a band: damage + Confuse everyone there (they attack their own side).",
+  secondFace:"Second Face — blend into the crowd: go Hidden (untargetable) + gain a Dodge.",
+  thousandFaces:"★ Thousand Faces (once/expedition) — damage and Confuse every enemy.",
+  frag:"Frag — a grenade: heavy hit on one enemy + shrapnel splash to the rest of its band.",
+  cluster:"Cluster — carpet a whole band with grenades.",
+  barrage:"★ Barrage (once/expedition) — explosions hit every enemy — but the recoil Staggers Nitro (he loses his next turn).",
+  venomDart:"Venom Dart — poison a foe; every tick deals damage AND heals each wounded ally (+1). The Shaman's healing.",
+  swarm:"Swarm — Venom every enemy in a band (each tick heals your squad).",
+  spiritWard:"Spirit Ward — shield an ally with a Barrier and cleanse their afflictions (no direct heal — that's what Venom is for).",
+  venomBurst:"★ Venom Burst (once/expedition) — Venom every enemy at once: huge ongoing squad healing while it ticks.",
+  shuriken:"Shuriken — throw stars at any band (Bleeds on a clean hit). Breaks your stealth.",
+  shadowStrike:"Shadow Strike — melee; +3 bonus damage if you strike from Hidden (then you're revealed).",
+  vanish:"Vanish — go invisible: Hidden (immune to targeted attacks, but zones still hit) + a Dodge.",
+  thousandCuts:"★ Thousand Cuts (once/expedition) — slash every enemy + Bleed, then vanish (Hidden + Dodge).",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -3023,6 +3255,16 @@ function arm(kind){
   if(kind==="reposition")S.pending={type:"reposition",actor:a.id,targets:"enemy"};
   if(kind==="rapid")    S.pending={type:"rapid",actor:a.id,targets:"enemy"};
   if(kind==="hitrun")   S.pending={type:"hitrun",actor:a.id,targets:"enemy"};
+  if(kind==="festering")S.pending={type:"festering",actor:a.id,targets:"enemy"};
+  if(kind==="steal")    S.pending={type:"steal",actor:a.id,targets:"enemy"};
+  if(kind==="mockery")  S.pending={type:"mockery",actor:a.id};
+  if(kind==="frag")     S.pending={type:"frag",actor:a.id,targets:"enemy"};
+  if(kind==="cluster")  S.pending={type:"cluster",actor:a.id};
+  if(kind==="venomdart")S.pending={type:"venomdart",actor:a.id,targets:"enemy"};
+  if(kind==="swarm")    S.pending={type:"swarm",actor:a.id};
+  if(kind==="spiritward")S.pending={type:"spiritward",actor:a.id,targets:"ally"};
+  if(kind==="shuriken") S.pending={type:"shuriken",actor:a.id,targets:"enemy"};
+  if(kind==="shadowstrike")S.pending={type:"shadowstrike",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -3049,6 +3291,9 @@ function pickBand(i){
   else if(t==="twister") twister(a,i);
   else if(t==="windmill") windmill(a,i);
   else if(t==="reposition") repositionTo(a,i);
+  else if(t==="mockery") mockery(a,i);
+  else if(t==="cluster") cluster(a,i);
+  else if(t==="swarm") swarm(a,i);
 }
 function pickTool(g){ if(!S.pending) return; const a=U(S.pending.actor);
   S.pending.tool=g; S.pending.toolPick=false;
@@ -3147,6 +3392,13 @@ function pick(arg){
   if(type==="reposition"){ S.pending.foe=target.id; S.pending.bandPick=true; render(); return; }   // stage 2: pick a destination band
   if(type==="rapid"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Rapid Strikes hit Engaged or Near."; return; } rapidStrikes(a,target); return; }
   if(type==="hitrun"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Hit & Run hits Engaged or Near."; return; } hitAndRun(a,target); return; }
+  if(type==="festering"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Festering Blow hits Engaged or Near."; return; } festeringBlow(a,target); return; }
+  if(type==="steal"){ stealMove(a,target); return; }
+  if(type==="frag"){ frag(a,target); return; }
+  if(type==="venomdart"){ venomDart(a,target); return; }
+  if(type==="spiritward"){ spiritWard(a,target); return; }
+  if(type==="shuriken"){ shuriken(a,target); return; }
+  if(type==="shadowstrike"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Shadow Strike hits Engaged or Near."; return; } shadowStrike(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
