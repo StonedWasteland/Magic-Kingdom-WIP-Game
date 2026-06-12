@@ -2259,10 +2259,12 @@ function pillowFort(actor){               // Pillow: hunker down — Barrier + D
   log(`${actor.name} throws up a pillow fort — Barrier ${actor.barrier} + a Dodge.`,"l-hit");
   finishAction(actor);
 }
-function sigLightsOut(actor){             // Pillow sig: LIGHTS OUT — smash + KO the warband
+function sigLightsOut(actor){             // Pillow sig: LIGHTS OUT — smash the field, KO whoever's in your face
   spend(actor,4); actor.sigDone=true;
   log(`${actor.name} winds up the magic pillow — LIGHTS OUT:`,"l-bad");
-  liveEnemies().forEach(e=>{ damage(e,5,"LIGHTS OUT"); setSt(e,"suppressed",1); log(`  ${e.name} takes 5 — out cold${e.ctrlImmune?" (shrugs off the KO)":" (Suppressed, can't act)"}.`,"l-part"); });
+  liveEnemies().forEach(e=>{ const near=e.band===actor.band; damage(e,5,"LIGHTS OUT");
+    if(near) setSt(e,"suppressed",1);
+    log(`  ${e.name} takes 5${near?(e.ctrlImmune?" — too tough to KO":" — out cold (Suppressed, can't act)"):" (still standing — out of pillow range)"}.`,"l-part"); });
   finishAction(actor);
 }
 
@@ -3280,7 +3282,7 @@ function render(){
     : a.role==="Pharma"
     ? "Mad pharmacist (high risk/reward): Uppers grant an extra action but leave the ally Vulnerable; Painkillers heal big but Slow; Cocktail is a gamble (usually great, sometimes a bad trip). Overdose juices the whole squad — and exposes them. Use the buffs, then finish FAST before Vulnerable bites."
     : a.role==="Pillow"
-    ? "Pillow striker: Bonk knocks foes back + Staggers; Fluffy Flurry rains 3 quick hits; Pillow Fort to block up. LIGHTS OUT smashes AND knocks out the whole warband (Suppressed) — a real fight-ender."
+    ? "Pillow striker: Bonk knocks foes back + Staggers; Fluffy Flurry rains 3 quick hits; Pillow Fort to block up. LIGHTS OUT smashes everyone and knocks out whoever's in your band (Suppressed) — gather them up front first."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -3547,7 +3549,7 @@ const TIPS = {
   pillowBonk:"Pillow Bonk — a magical whomp: damage + Stagger + knock the enemy back a band.",
   fluffyFlurry:"Fluffy Flurry — a flurry of 3 quick pillow swats on one foe.",
   pillowFort:"Pillow Fort — hunker down: Barrier + a Dodge.",
-  lightsOut:"★ LIGHTS OUT (once/expedition) — smash every enemy AND knock them out (Suppressed — can't act). Brutes shrug off the KO.",
+  lightsOut:"★ LIGHTS OUT (once/expedition) — smash every enemy for 5, and knock out only those in Fluff's band (Suppressed — can't act). Gather them up front first. Brutes shrug off the KO.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
