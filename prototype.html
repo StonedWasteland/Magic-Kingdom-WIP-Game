@@ -1619,10 +1619,10 @@ function ballad(actor,target){            // Keys: a slow ballad — big heal + 
   log(`${actor.name} plays a tender ballad for ${target.name} — heals ${target.hp-b}${c?`, eases ${c} affliction(s)`:""}.`,"l-hit");
   finishAction(actor);
 }
-function anthem(actor){                   // Keys: an anthem — squad Barrier + Guarded (50% reduction)
+function anthem(actor){                   // Keys: an anthem — squad Guarded (50% damage reduction)
   spend(actor,2);
-  party().filter(alive).forEach(u=>{ u.barrier=(u.barrier||0)+2; setSt(u,"guard",2); });
-  log(`${actor.name} strikes up an ANTHEM — the whole squad gets Barrier 2 + Guarded (incoming damage halved).`,"l-hit");
+  party().filter(alive).forEach(u=>{ setSt(u,"guard",2); });
+  log(`${actor.name} strikes up an ANTHEM — the whole squad is Guarded (incoming damage halved, 2 rounds).`,"l-hit");
   finishAction(actor);
 }
 function sigCrescendo(actor){             // Keys sig: build to a crescendo
@@ -2650,7 +2650,7 @@ function render(){
     : a.role==="Sonic"
     ? "Lead guitar: Power Chord is a big single hit that stuns; Shred Solo rakes a band and stacks Shred (they take more from everything). Face Melter for the encore."
     : a.role==="Keys"
-    ? "Keyboard support: Sustain (regen-over-time), Ballad (big heal + cleanse), Anthem (squad Barrier + Guarded: incoming damage halved). Crescendo does it all for the whole band."
+    ? "Keyboard support: Sustain (regen-over-time), Ballad (big heal + cleanse), Anthem (squad Guarded: incoming damage halved). Crescendo does it all for the whole band."
     : a.role==="Vocal"
     ? "Vocalist striker: get in their face — Mic Drop (melee + stun), Belt It (3 quick hits), Crowd Surf to dive anywhere with a Dodge. Loud, fast, fragile."
     : a.role==="Shield"
@@ -2844,7 +2844,7 @@ const TIPS = {
   faceMelter:"★ Face Melter (once/expedition) — damage + Shred + Stagger every enemy.",
   sustain:"Sustain — hold a chord on an ally: Regenerating (heal over time) + a little instant heal.",
   ballad:"Ballad — a tender song: big heal for an ally and clears their afflictions.",
-  anthem:"Anthem — rally the whole squad: Barrier 2 + Guarded (incoming damage halved) for 2 rounds.",
+  anthem:"Anthem — rally the whole squad: Guarded (incoming damage halved) for 2 rounds.",
   crescendo:"★ Crescendo (once/expedition) — the squad heals, gains a Barrier, and Regenerates.",
   micDrop:"Mic Drop — get in their face: melee hit that Staggers on a clean strike.",
   beltIt:"Belt It — a screaming run: 3 quick hits at random enemies.",
