@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:(S.team===12?13:1))))))))))))" title="Cycle to the next squad (1 → … → 13)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:(S.team===12?13:(S.team===13?14:1)))))))))))))" title="Cycle to the next squad (1 → … → 14)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -181,6 +181,11 @@ const HERO_DESC={
   boot:"Soccer-ball artillery — kicks explosive balls: big single + knockback, and band volleys.",
   shroom:"Mushroom support — healing spores, toadstool shields, and ★ Bloom regrows the fallen.",
   revv:"Motorcycle striker — charges + knockback, drive-by chip, and high mobility (Dodge + free moves).",
+  slick:"Grease tank — taunts hard, dodges harder; Oil Slick Slows whole bands. Slippery wall.",
+  cayenne:"Hot-sauce controller — Blinds and Burns; Ghost Pepper melts one foe. Make them miss.",
+  pitch:"Business-card sniper — precise big single hits + Bleed (paper cuts); ★ cards on everyone.",
+  quack:"Mad pharmacist — high-risk drug buffs (extra actions, big heals) that leave allies Vulnerable.",
+  fluff:"Pillow striker — bonk + knockback, fast flurries; ★ LIGHTS OUT KOs the whole warband.",
 };
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
@@ -274,16 +279,23 @@ function team13(){ return [   // the Oddballs — absurd everyday items
   { id:"shroom",   name:"Shroom",    role:"Fungus",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"revv",     name:"Revv",      role:"Moto",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team14(){ return [   // the Riff-Raff — scrappy weirdos
+  { id:"slick",    name:"Slick",     role:"Grease",  side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"cayenne",  name:"Cayenne",   role:"Sauce",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"pitch",    name:"Pitch",     role:"Cards",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"quack",    name:"Quack",     role:"Pharma",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"fluff",    name:"Fluff",     role:"Pillow",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===13?team13():team===12?team12():team===11?team11():team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===14?team14():team===13?team13():team===12?team12():team===11?team11():team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10(),team11(),team12(),team13()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10(),team11(),team12(),team13(),team14()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -331,7 +343,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===13 ? "TEAM 13 (the Oddballs — Pip, Goober, Boot, Shroom, Revv)" : team===12 ? "TEAM 12 (the Wildcards — Blight, Mimic, Nitro, Mojo, Kage)" : team===11 ? "TEAM 11 (the Vanguard — Rampart, Cyclone, Stretch, Herald, Dash)" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===14 ? "TEAM 14 (the Riff-Raff — Slick, Cayenne, Pitch, Quack, Fluff)" : team===13 ? "TEAM 13 (the Oddballs — Pip, Goober, Boot, Shroom, Revv)" : team===12 ? "TEAM 12 (the Wildcards — Blight, Mimic, Nitro, Mojo, Kage)" : team===11 ? "TEAM 11 (the Vanguard — Rampart, Cyclone, Stretch, Herald, Dash)" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -2123,6 +2135,137 @@ function sigRoadkill(actor){              // Moto sig: floor it through everyone
   finishAction(actor);
 }
 
+/* ─── Team 14 actions (the Riff-Raff) ─────────────────────────────────────── */
+// Slick — grease tank (taunts hard, dodges harder)
+function greasedUp(actor){                // Grease: slick up — stack Dodge + Guarded
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+2; setSt(actor,"guard",2);
+  log(`${actor.name} slicks up with grease — +2 Dodge (attacks slide off) + Guarded (halve the rest).`,"l-hit");
+  finishAction(actor);
+}
+function oilSlick(actor,band){            // Grease: a slippery zone — Slow a whole band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"an oil slick"); setSt(e,"slowed",2); });
+  log(`${actor.name} spreads an oil slick across ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) skid (2 + Slowed)`:"empty ground"}.`,"l-root");
+  finishAction(actor);
+}
+function sigSlipSlide(actor){             // Grease sig: the whole floor goes slick
+  spend(actor,4); actor.sigDone=true;
+  setSt(actor,"taunting",3); actor.dodge=(actor.dodge||0)+3;
+  log(`${actor.name} greases the entire field — Taunting all, +3 Dodge, and the warband can't keep its feet:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,2,"the slick"); setSt(e,"slowed",2); log(`  ${e.name} slips: 2 + Slowed.`,"l-part"); });
+  finishAction(actor);
+}
+// Cayenne — hot sauce control
+function hotSplash(actor,target){         // Sauce: a faceful — Blind + Slow
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s splash misses ${target.name}.`,"l-miss"); }
+  else { damage(target,2,"hot sauce"); setSt(target,"blinded",2); setSt(target,"slowed",1); log(`  ${target.name} takes 2 — sauce in the eyes (Blinded + Slowed).`,"l-root"); }
+  finishAction(actor);
+}
+function douse(actor,band){               // Sauce: douse a whole band — Blind
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"a dousing"); setSt(e,"blinded",2); });
+  log(`${actor.name} douses ${BANDS[band]} in hot sauce — ${hit.length?`${hit.length} foe(s) take 2 + Blinded`:"nothing to douse"}.`,"l-root");
+  finishAction(actor);
+}
+function ghostPepper(actor,target){       // Sauce: the nuclear option — heavy Burn + Blind
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} fumbles the ghost pepper.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"a ghost pepper"); setSt(target,"burning",3); setSt(target,"blinded",2); log(`  ${target.name} takes ${t==="full"?3:2} + Burning (3) + Blinded — utterly scorched.`,"l-fire"); }
+  finishAction(actor);
+}
+function sigFiveAlarm(actor){             // Sauce sig: five-alarm — Blind + Burn the field
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} sets off a FIVE-ALARM blaze across the field:`,"l-fire");
+  liveEnemies().forEach(e=>{ damage(e,3,"five-alarm sauce"); setSt(e,"burning",2); setSt(e,"blinded",2); log(`  ${e.name} takes 3 + Burning + Blinded.`,"l-part"); });
+  finishAction(actor);
+}
+// Pitch — business-card sniper
+function coldCall(actor,target){          // Cards: a sniped card — big precise single + Bleed
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s card sails past ${target.name}. "Maybe next quarter."`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"a business card"); log(`  ${target.name} takes 4.`,"l-part"); }
+  else { damage(target,6,"a business card"); setSt(target,"bleeding",2); log(`  ${target.name} takes 6 + Bleeding — a vicious paper cut. "Let's circle back."`,"l-hit"); }
+  finishAction(actor);
+}
+function spam(actor,band){                // Cards: a fan of cards across a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,3,"a fan of cards"); });
+  log(`${actor.name} sprays a fan of cards into ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 3`:"no leads here"}.`,"l-part");
+  finishAction(actor);
+}
+function sigABC(actor){                   // Cards sig: Always Be Closing
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} fans out everything — ALWAYS BE CLOSING:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"a storm of cards"); setSt(e,"bleeding",2); log(`  ${e.name} takes 5 + Bleeding.`,"l-part"); });
+  finishAction(actor);
+}
+// Quack — mad pharmacist (high risk / high reward)
+function uppers(actor,target){            // Pharma: an extra action + Dodge, but Vulnerable
+  spend(actor,2);
+  target.extraActs=(target.extraActs||0)+1; target.dodge=(target.dodge||0)+1; setSt(target,"shred",2);
+  log(`${actor.name} slips ${target.name} some Uppers — an extra action + a Dodge, but jittery and exposed (Vulnerable: +2 damage taken).`,"l-bad");
+  finishAction(actor);
+}
+function painkillers(actor,target){       // Pharma: big heal + shield, but Slowed
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+5); target.barrier=(target.barrier||0)+3; setSt(target,"slowed",2);
+  log(`${actor.name} doses ${target.name} with Painkillers — heals ${target.hp-b} + Barrier 3, but woozy (Slowed).`,"l-hit");
+  finishAction(actor);
+}
+function cocktail(actor,target){          // Pharma: a gamble — usually great, sometimes a bad trip
+  spend(actor,1);
+  const r=Math.random();
+  if(r<0.25){ damage(target,3,"a bad trip"); setSt(target,"shred",2);
+    log(`${actor.name} mixes ${target.name} a Cocktail — BAD TRIP! 3 damage + Vulnerable (+2 taken). Yikes.`,"l-bad"); }
+  else if(r<0.55){ const b=target.hp; target.hp=Math.min(target.max,target.hp+6); log(`${actor.name}'s Cocktail hits ${target.name} just right — heals ${target.hp-b}.`,"l-hit"); }
+  else if(r<0.8){ target.dodge=(target.dodge||0)+2; log(`${actor.name}'s Cocktail sharpens ${target.name} — +2 Dodge.`,"l-hit"); }
+  else { target.extraActs=(target.extraActs||0)+1; log(`${actor.name}'s Cocktail supercharges ${target.name} — an extra action!`,"l-hit"); }
+  finishAction(actor);
+}
+function sigOverdose(actor){              // Pharma sig: juice the whole squad — and expose them
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+4); u.extraActs=(u.extraActs||0)+1; u.dodge=(u.dodge||0)+1; setSt(u,"shred",2); });
+  log(`${actor.name} doses the WHOLE squad — OVERDOSE: everyone heals 4, gets an extra action + a Dodge — but all Vulnerable (+2 damage taken). Win it now.`,"l-bad");
+  finishAction(actor);
+}
+// Fluff — the pillow fighter
+function pillowBonk(actor,target){        // Pillow: a magical whomp — knockback + Stagger
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s pillow whiffs past ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"a pillow whomp"); setSt(target,"stagger",1); log(`  ${target.name} takes 4 + Staggered.`,"l-part"); }
+  else { damage(target,5,"a pillow whomp"); setSt(target,"stagger",1);
+    if(alive(target)&&target.band<2&&!target.ctrlImmune){ target.band++; log(`  ${target.name} takes 5 + Staggered, sent tumbling to ${BANDS[target.band]}.`,"l-hit"); }
+    else log(`  ${target.name} takes 5 + Staggered.`,"l-hit"); }
+  finishAction(actor);
+}
+function fluffyFlurry(actor,target){      // Pillow: a flurry of swings
+  spend(actor,1);
+  log(`${actor.name} unleashes a fluffy flurry on ${target.name} — 3 quick whomps:`,"l-part");
+  for(let i=0;i<3;i++){ if(alive(target)) damage(target,2,"a pillow swat"); log(`  → 2.`,"l-part"); }
+  finishAction(actor);
+}
+function pillowFort(actor){               // Pillow: hunker down — Barrier + Dodge
+  spend(actor,1);
+  actor.barrier=(actor.barrier||0)+4; actor.dodge=(actor.dodge||0)+1;
+  log(`${actor.name} throws up a pillow fort — Barrier ${actor.barrier} + a Dodge.`,"l-hit");
+  finishAction(actor);
+}
+function sigLightsOut(actor){             // Pillow sig: LIGHTS OUT — smash + KO the warband
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} winds up the magic pillow — LIGHTS OUT:`,"l-bad");
+  liveEnemies().forEach(e=>{ damage(e,5,"LIGHTS OUT"); setSt(e,"suppressed",1); log(`  ${e.name} takes 5 — out cold${e.ctrlImmune?" (shrugs off the KO)":" (Suppressed, can't act)"}.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -2404,7 +2547,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:(S.team===12?13:1)))))))))));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:(S.team===12?13:(S.team===13?14:1))))))))))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -2505,7 +2648,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"||pt==="twister"||pt==="windmill"||pt==="mockery"||pt==="cluster"||pt==="swarm"||pt==="stickytrap"||pt==="volley"||(pt==="reposition"&&S.pending.bandPick)){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"||pt==="twister"||pt==="windmill"||pt==="mockery"||pt==="cluster"||pt==="swarm"||pt==="stickytrap"||pt==="volley"||pt==="oilslick"||pt==="douse"||pt==="spam"||(pt==="reposition"&&S.pending.bandPick)){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -2530,6 +2673,9 @@ function render(){
         : pt==="swarm" ? "Choose a band to Venom (each tick heals your squad):"
         : pt==="stickytrap" ? "Choose a band to glue down (Root + Slow everyone there):"
         : pt==="volley" ? "Choose a band to boot a volley of balls into:"
+        : pt==="oilslick" ? "Choose a band to grease (damage + Slow everyone there):"
+        : pt==="douse" ? "Choose a band to douse in hot sauce (Blind everyone there):"
+        : pt==="spam" ? "Choose a band to fan business cards across:"
         : pt==="reposition" ? `Send ${(U(S.pending.foe)||{name:"the foe"}).name} to which band?`
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
@@ -2655,6 +2801,14 @@ function render(){
         : pt==="toadstool" ? "Click an ally to shield with a Toadstool cap."
         : pt==="runover" ? "Click an enemy at Engaged or Near to Run Over (knockback)."
         : pt==="driveby" ? "Click any enemy for a Drive-By (chip + reposition)."
+        : pt==="hotsplash" ? "Click any enemy to splash with hot sauce (Blind + Slow)."
+        : pt==="ghostpepper" ? "Click any enemy to torch with a Ghost Pepper (Burn + Blind)."
+        : pt==="coldcall" ? "Click any enemy to snipe with a business card (+Bleed)."
+        : pt==="uppers" ? "Click an ally for Uppers (extra action + Dodge, but Vulnerable)."
+        : pt==="painkillers" ? "Click an ally for Painkillers (heal + shield, but Slowed)."
+        : pt==="cocktail" ? "Click an ally to mix a Cocktail (a gamble)."
+        : pt==="pillowbonk" ? "Click an enemy at Engaged or Near for a Pillow Bonk (knockback)."
+        : pt==="fluffyflurry" ? "Click an enemy at Engaged or Near for a Fluffy Flurry (3 hits)."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -2961,6 +3115,30 @@ function render(){
     b.push(btn("Drive-By (chip+move)","arm('driveby')",false,TIPS.driveBy));
     b.push(btn("Burnout (++Dodge, move)",`burnout(U('${a.id}'))`,false,TIPS.burnout));
     b.push(btn("★ Roadkill",`sigRoadkill(U('${a.id}'))`, a.sigDone, TIPS.roadkill));
+  } else if(a.role==="Grease"){
+    b.push(btn("Taunt",`taunt(U('${a.id}'))`, a.st.taunting>0, TIPS.taunt));
+    b.push(btn("Greased Up (++Dodge)",`greasedUp(U('${a.id}'))`,false,TIPS.greasedUp));
+    b.push(btn("Oil Slick (slow band)","arm('oilslick')",false,TIPS.oilSlick));
+    b.push(btn("★ Slip & Slide",`sigSlipSlide(U('${a.id}'))`, a.sigDone, TIPS.slipSlide));
+  } else if(a.role==="Sauce"){
+    b.push(btn("Hot Splash (blind+slow)","arm('hotsplash')",false,TIPS.hotSplash));
+    b.push(btn("Douse (blind band)","arm('douse')",false,TIPS.douse));
+    b.push(btn("Ghost Pepper (burn+blind)","arm('ghostpepper')",false,TIPS.ghostPepper));
+    b.push(btn("★ Five-Alarm",`sigFiveAlarm(U('${a.id}'))`, a.sigDone, TIPS.fiveAlarm));
+  } else if(a.role==="Cards"){
+    b.push(btn("Cold Call (sniper+bleed)","arm('coldcall')",false,TIPS.coldCall));
+    b.push(btn("Spam (band)","arm('spam')",false,TIPS.spam));
+    b.push(btn("★ Always Be Closing",`sigABC(U('${a.id}'))`, a.sigDone, TIPS.abc));
+  } else if(a.role==="Pharma"){
+    b.push(btn("Uppers (action, but Vuln)","arm('uppers')",false,TIPS.uppers));
+    b.push(btn("Painkillers (heal, but Slow)","arm('painkillers')",false,TIPS.painkillers));
+    b.push(btn("Cocktail (gamble)","arm('cocktail')",false,TIPS.cocktail));
+    b.push(btn("★ Overdose",`sigOverdose(U('${a.id}'))`, a.sigDone, TIPS.overdose));
+  } else if(a.role==="Pillow"){
+    b.push(btn("Pillow Bonk (knockback)","arm('pillowbonk')",false,TIPS.pillowBonk));
+    b.push(btn("Fluffy Flurry (3 hits)","arm('fluffyflurry')",false,TIPS.fluffyFlurry));
+    b.push(btn("Pillow Fort (shield+dodge)",`pillowFort(U('${a.id}'))`,false,TIPS.pillowFort));
+    b.push(btn("★ LIGHTS OUT",`sigLightsOut(U('${a.id}'))`, a.sigDone, TIPS.lightsOut));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -3093,6 +3271,16 @@ function render(){
     ? "Mushroom support: Healing Spores (heal + regen) and Toadstool (shield) for one ally, Fairy Ring for the squad. Bloom REGROWS the fallen (revive all + heal). A classic medic with a revive."
     : a.role==="Moto"
     ? "Motorcycle striker: Run Over charges + knocks back; Drive-By chips and lets you reposition free (any band); Burnout revs for +2 Dodge + a free move. Roadkill floors it through everyone. Fast and slippery."
+    : a.role==="Grease"
+    ? "Grease tank: Taunt to pull aggro, Greased Up to stack Dodge + halve the rest (attacks slide off), Oil Slick to Slow a whole band. Slip & Slide greases the field. A frustrating, slippery wall."
+    : a.role==="Sauce"
+    ? "Hot-sauce controller: Hot Splash Blinds + Slows one, Douse Blinds a band, Ghost Pepper torches one foe (heavy Burn + Blind). Blind makes them miss — stack it and the warband flails."
+    : a.role==="Cards"
+    ? "Business-card sniper: Cold Call is a precise big single hit that Bleeds (paper cut); Spam fans cards across a band. Always Be Closing buries everyone. High single-target damage, squishy — stay back."
+    : a.role==="Pharma"
+    ? "Mad pharmacist (high risk/reward): Uppers grant an extra action but leave the ally Vulnerable; Painkillers heal big but Slow; Cocktail is a gamble (usually great, sometimes a bad trip). Overdose juices the whole squad — and exposes them. Use the buffs, then finish FAST before Vulnerable bites."
+    : a.role==="Pillow"
+    ? "Pillow striker: Bonk knocks foes back + Staggers; Fluffy Flurry rains 3 quick hits; Pillow Fort to block up. LIGHTS OUT smashes AND knocks out the whole warband (Suppressed) — a real fight-ender."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -3341,6 +3529,25 @@ const TIPS = {
   driveBy:"Drive-By — scream past any enemy for a chip hit, then reposition free.",
   burnout:"Burnout — rev the engine: +2 Dodge and a free reposition.",
   roadkill:"★ Roadkill (once/expedition) — floor it through the whole warband: heavy damage + knock everyone back.",
+  // Team 14 (the Riff-Raff)
+  greasedUp:"Greased Up — slick yourself: +2 Dodge (attacks slide off) + Guarded (halve the rest).",
+  oilSlick:"Oil Slick — spread grease across a band: damage + Slow everyone there.",
+  slipSlide:"★ Slip & Slide (once/expedition) — Taunt all + big Dodge, and the whole warband slips (damage + Slow all).",
+  hotSplash:"Hot Splash — a faceful of sauce: damage + Blind + Slow one enemy.",
+  douse:"Douse — soak a whole band in hot sauce: damage + Blind everyone there.",
+  ghostPepper:"Ghost Pepper — torch one foe: damage + heavy Burning (3) + Blind.",
+  fiveAlarm:"★ Five-Alarm (once/expedition) — damage + Burn + Blind every enemy.",
+  coldCall:"Cold Call — snipe a business card at any enemy: big single hit + Bleed (paper cut).",
+  spam:"Spam — fan cards across a whole band.",
+  abc:"★ Always Be Closing (once/expedition) — a storm of cards hits every enemy + Bleed.",
+  uppers:"Uppers — give an ally an extra action + a Dodge, but they become Vulnerable (+2 damage taken, 2 rounds).",
+  painkillers:"Painkillers — heal an ally + Barrier, but they're Slowed (woozy).",
+  cocktail:"Cocktail — a gamble on an ally: usually a great buff (heal / Dodge / extra action), ~1-in-4 a bad trip (damage + Vulnerable).",
+  overdose:"★ Overdose (once/expedition) — the whole squad heals, gains an extra action + Dodge — but ALL become Vulnerable. Win the fight now.",
+  pillowBonk:"Pillow Bonk — a magical whomp: damage + Stagger + knock the enemy back a band.",
+  fluffyFlurry:"Fluffy Flurry — a flurry of 3 quick pillow swats on one foe.",
+  pillowFort:"Pillow Fort — hunker down: Barrier + a Dodge.",
+  lightsOut:"★ LIGHTS OUT (once/expedition) — smash every enemy AND knock them out (Suppressed — can't act). Brutes shrug off the KO.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -3489,6 +3696,17 @@ function arm(kind){
   if(kind==="toadstool")S.pending={type:"toadstool",actor:a.id,targets:"ally"};
   if(kind==="runover")  S.pending={type:"runover",actor:a.id,targets:"enemy"};
   if(kind==="driveby")  S.pending={type:"driveby",actor:a.id,targets:"enemy"};
+  if(kind==="oilslick") S.pending={type:"oilslick",actor:a.id};
+  if(kind==="hotsplash")S.pending={type:"hotsplash",actor:a.id,targets:"enemy"};
+  if(kind==="douse")    S.pending={type:"douse",actor:a.id};
+  if(kind==="ghostpepper")S.pending={type:"ghostpepper",actor:a.id,targets:"enemy"};
+  if(kind==="coldcall") S.pending={type:"coldcall",actor:a.id,targets:"enemy"};
+  if(kind==="spam")     S.pending={type:"spam",actor:a.id};
+  if(kind==="uppers")   S.pending={type:"uppers",actor:a.id,targets:"ally"};
+  if(kind==="painkillers")S.pending={type:"painkillers",actor:a.id,targets:"ally"};
+  if(kind==="cocktail") S.pending={type:"cocktail",actor:a.id,targets:"ally"};
+  if(kind==="pillowbonk")S.pending={type:"pillowbonk",actor:a.id,targets:"enemy"};
+  if(kind==="fluffyflurry")S.pending={type:"fluffyflurry",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -3520,6 +3738,9 @@ function pickBand(i){
   else if(t==="swarm") swarm(a,i);
   else if(t==="stickytrap") stickyTrap(a,i);
   else if(t==="volley") volley(a,i);
+  else if(t==="oilslick") oilSlick(a,i);
+  else if(t==="douse") douse(a,i);
+  else if(t==="spam") spam(a,i);
 }
 function pickTool(g){ if(!S.pending) return; const a=U(S.pending.actor);
   S.pending.tool=g; S.pending.toolPick=false;
@@ -3633,6 +3854,14 @@ function pick(arg){
   if(type==="toadstool"){ toadstool(a,target); return; }
   if(type==="runover"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Run Over hits Engaged or Near."; return; } runOver(a,target); return; }
   if(type==="driveby"){ driveBy(a,target); return; }
+  if(type==="hotsplash"){ hotSplash(a,target); return; }
+  if(type==="ghostpepper"){ ghostPepper(a,target); return; }
+  if(type==="coldcall"){ coldCall(a,target); return; }
+  if(type==="uppers"){ uppers(a,target); return; }
+  if(type==="painkillers"){ painkillers(a,target); return; }
+  if(type==="cocktail"){ cocktail(a,target); return; }
+  if(type==="pillowbonk"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Pillow Bonk hits Engaged or Near."; return; } pillowBonk(a,target); return; }
+  if(type==="fluffyflurry"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Fluffy Flurry hits Engaged or Near."; return; } fluffyFlurry(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
