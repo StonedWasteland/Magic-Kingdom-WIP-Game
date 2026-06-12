@@ -366,6 +366,7 @@ function damage(u,n,how,pierce){                     // returns true if it lande
     log(`  ${u.name} dodges the ${how||"hit"}! (Dodge ${u.dodge} left)`,"l-miss"); return false; }
   u._hit=true;                                     // took damage this round (Gloop's regen is suppressed when hit)
   n += (u.st.shred||0);                            // Shred amplifier: take more from every source
+  if(u.st.guard && n>0) n=Math.ceil(n/2);          // Guarded buff: halve incoming damage (rounds up)
   if(!pierce && (u.barrier||0)>0){                 // Barrier shields soak before HP (psychic damage pierces it)
     const soak=Math.min(u.barrier,n); u.barrier-=soak; n-=soak;
     if(soak>0) log(`  ${u.name}'s Barrier absorbs ${soak}${u.barrier>0?` (${u.barrier} left)`:" — shattered"}.`,"l-miss");
@@ -1618,10 +1619,10 @@ function ballad(actor,target){            // Keys: a slow ballad — big heal + 
   log(`${actor.name} plays a tender ballad for ${target.name} — heals ${target.hp-b}${c?`, eases ${c} affliction(s)`:""}.`,"l-hit");
   finishAction(actor);
 }
-function anthem(actor){                   // Keys: an anthem — squad Barrier + Dodge
+function anthem(actor){                   // Keys: an anthem — squad Barrier + Guarded (50% reduction)
   spend(actor,2);
-  party().filter(alive).forEach(u=>{ u.barrier=(u.barrier||0)+3; u.dodge=(u.dodge||0)+1; });
-  log(`${actor.name} strikes up an ANTHEM — the whole squad gets Barrier 3 + a Dodge.`,"l-hit");
+  party().filter(alive).forEach(u=>{ u.barrier=(u.barrier||0)+2; setSt(u,"guard",2); });
+  log(`${actor.name} strikes up an ANTHEM — the whole squad gets Barrier 2 + Guarded (incoming damage halved).`,"l-hit");
   finishAction(actor);
 }
 function sigCrescendo(actor){             // Keys sig: build to a crescendo
@@ -2033,7 +2034,7 @@ function endOfRound(){
   S.glass=S.glass.map(n=>Math.max(0,n-1));
   S.units.forEach(u=>{ if(u.barrier>0) u.barrier=Math.floor(u.barrier/2); });   // shields erode — re-cast to keep one up
   S.units.forEach(u=>{ u._hit=false; });                                        // reset per-round "was hit" (Gloop regen)
-  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison","confused","leeching","feared","charmed","hidden"].forEach(k=>{
+  S.units.forEach(u=>{ ["rooted","slowed","burning","taunting","bleeding","regen","heavy","entangled","blinded","shred","thorns","poison","confused","leeching","feared","charmed","hidden","guard"].forEach(k=>{
     if(u.st[k]) u.st[k]--; }); });   // NOTE: Sickness is NOT here — it compounds all fight (cleanse to clear)
 
   // win/lose
@@ -2087,6 +2088,7 @@ function unitCard(u){
     if(u.st.burning) chips.push(chip("burning",`Burning ${u.st.burning}`,"Burning — 3 fire damage at end of round. (Fire-affinity units are immune.)"));
     if(u.st.stagger) chips.push(chip("stagger","Staggered","Staggered — loses its next action."));
     if(u.stance)     chips.push(chip("armor",`⛨ ${u.role==="Invuln"?"Braced":"Metal"} · Armored`,"Armored — −2 to every incoming hit and immune to Stagger, but can't move and costs Strain each round."));
+    if(u.st.guard)   chips.push(chip("armor",`🛡 Guarded ${u.st.guard}`,"Guarded — incoming damage is halved (before Barrier/HP)."));
     if(u.st.taunting)chips.push(chip("taunt",`⚑ Taunting ${u.st.taunting}`,"Taunting — every enemy must attack this unit."));
     if(u.st.regen)   chips.push(chip("regen",`✚ Regenerating ${u.st.regen}`,"Regenerating — heals 3 HP at end of round. Suppressed (Cauterized) while Burning or standing in fire."));
     if(u.st.bleeding)chips.push(chip("bleed",`🩸 Bleeding ${u.st.bleeding}`,"Bleeding — 2 damage at end of round."));
@@ -2648,7 +2650,7 @@ function render(){
     : a.role==="Sonic"
     ? "Lead guitar: Power Chord is a big single hit that stuns; Shred Solo rakes a band and stacks Shred (they take more from everything). Face Melter for the encore."
     : a.role==="Keys"
-    ? "Keyboard support: Sustain (regen-over-time), Ballad (big heal + cleanse), Anthem (squad Barrier + Dodge). Crescendo does it all for the whole band."
+    ? "Keyboard support: Sustain (regen-over-time), Ballad (big heal + cleanse), Anthem (squad Barrier + Guarded: incoming damage halved). Crescendo does it all for the whole band."
     : a.role==="Vocal"
     ? "Vocalist striker: get in their face — Mic Drop (melee + stun), Belt It (3 quick hits), Crowd Surf to dive anywhere with a Dodge. Loud, fast, fragile."
     : a.role==="Shield"
@@ -2842,7 +2844,7 @@ const TIPS = {
   faceMelter:"★ Face Melter (once/expedition) — damage + Shred + Stagger every enemy.",
   sustain:"Sustain — hold a chord on an ally: Regenerating (heal over time) + a little instant heal.",
   ballad:"Ballad — a tender song: big heal for an ally and clears their afflictions.",
-  anthem:"Anthem — rally the whole squad with a Barrier and a Dodge each.",
+  anthem:"Anthem — rally the whole squad: Barrier 2 + Guarded (incoming damage halved) for 2 rounds.",
   crescendo:"★ Crescendo (once/expedition) — the squad heals, gains a Barrier, and Regenerates.",
   micDrop:"Mic Drop — get in their face: melee hit that Staggers on a clean strike.",
   beltIt:"Belt It — a screaming run: 3 quick hits at random enemies.",
