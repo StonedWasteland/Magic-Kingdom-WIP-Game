@@ -283,12 +283,12 @@ function closeBuilderDOM(){ document.querySelector(".cols").style.display=""; do
 function closeBuilder(){ build=null; buildPool=null; closeBuilderDOM(); if(S) render(); }
 function startCustom(){ if(!build.every(x=>x)) return; customPicks=build.map(u=>u.id); build=null; buildPool=null; closeBuilderDOM(); newGame(0); }
 function foes(fight){                                       // a varied warband per expedition fight
-  if(fight>=3) return [                                    // climax — boss + buffer + caster + grunts
+  if(fight>=3) return [                                    // climax — boss + buffer + caster + plague + grunts
     mk("warlord","Warlord","brute",40,2,{ctrlImmune:true,boss:true}),
     mk("alpha","Pack Alpha","alpha",20,1),
     mk("cul","Cultist","caster",13,2),
+    mk("plg","Plaguebearer","plague",13,2),
     mk("r1","Raider A","melee",16,1),
-    mk("r2","Raider B","melee",16,1),
   ];
   if(fight===2) return [                                   // control + sustain — priority targets everywhere
     mk("r1","Raider A","melee",16,1), mk("r2","Raider B","melee",16,1),
@@ -298,7 +298,8 @@ function foes(fight){                                       // a varied warband 
     mk("mar","Marauder","ranged",12,2),
   ];
   return [                                                 // fight 1 / single skirmish — the sampler
-    mk("r1","Raider A","melee",16,1), mk("r2","Raider B","melee",16,1),
+    mk("r1","Raider A","melee",16,1),
+    mk("plg","Plaguebearer","plague",13,2),
     mk("mar","Marauder","ranged",12,2),
     mk("bru","Brute","brute",24,2,{ctrlImmune:true}),
     mk("dis","Disruptor","disruptor",14,1),
@@ -562,7 +563,7 @@ function aegis(actor,target){            // Radiance: Barrier shield on an ally 
 function cleanse(actor,target){          // Radiance "Unmake": purge ALL tags (buffs + debuffs), heal per tag
   spend(actor,1);
   let removed=0;
-  ["burning","bleeding","slowed","rooted","entangled","heavy","blinded","shred","stagger","regen","taunting","thorns"]
+  ["burning","bleeding","slowed","rooted","entangled","heavy","blinded","shred","stagger","regen","taunting","thorns","plague"]
     .forEach(k=>{ if(target.st[k]){ target.st[k]=0; removed++; } });
   if((target.barrier||0)>0){ target.barrier=0; removed++; }
   if(target.stance){ target.stance=false; removed++; }
@@ -745,7 +746,7 @@ function strain(actor,target){           // Ganja: the strain decides the effect
   spend(actor,1);
   if(s==="Indica"){ setSt(target,"regen",3); log(`${actor.name} passes ${target.name} some Indica — Regenerating.`,"l-hit"); }
   else if(s==="Sativa"){ target.barrier=(target.barrier||0)+4; target.dodge=(target.dodge||0)+1; log(`${actor.name} passes ${target.name} some Sativa — Barrier + a Dodge (too chill to get hit).`,"l-hit"); }
-  else { const bad=["burning","bleeding","slowed","rooted","entangled","heavy","blinded","stagger","shred"]; let c=null;
+  else { const bad=["burning","bleeding","slowed","rooted","entangled","heavy","blinded","stagger","shred","plague"]; let c=null;
     for(const k of bad){ if(target.st[k]){ c=k; target.st[k]=0; break; } }
     log(c?`${actor.name}'s Purple Haze melts ${c} off ${target.name}.`:`${actor.name} finds nothing to mellow on ${target.name}.`, c?"l-hit":"l-miss"); }
   finishAction(actor);
@@ -868,7 +869,7 @@ function sigMeltdown(actor){             // Rad signature: irradiate everything
 function salve(actor,target){            // Honey: heal + seal wounds (cleanse DoTs)
   spend(actor,1);
   const b=target.hp; target.hp=Math.min(target.max,target.hp+4);
-  const sealed=[]; ["burning","bleeding","sickness","poison"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; sealed.push(k); } });
+  const sealed=[]; ["burning","bleeding","sickness","poison","plague"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; sealed.push(k); } });
   log(`${actor.name} salves ${target.name} — heals ${target.hp-b}${sealed.length?`, seals ${sealed.join(" & ")}`:""}.`,"l-hit");
   finishAction(actor);
 }
@@ -1017,7 +1018,7 @@ function rewind(actor,target){            // Time: undo the damage an ally took 
 function stasis(actor,target){            // Time: freeze an ally out of time — cleanse + untouchable
   spend(actor,1);
   target.dodge=(target.dodge||0)+3;
-  ["burning","bleeding","sickness","poison","slowed","rooted","entangled","blinded","leeching"].forEach(k=>{ if(target.st[k]) target.st[k]=0; });
+  ["burning","bleeding","sickness","poison","slowed","rooted","entangled","blinded","leeching","plague"].forEach(k=>{ if(target.st[k]) target.st[k]=0; });
   log(`${actor.name} freezes ${target.name} out of time — cleansed + untouchable (Dodge 3).`,"l-hit");
   finishAction(actor);
 }
@@ -1129,7 +1130,7 @@ function premonition(actor,target){      // Empath: grant an ally foresight (Dod
 function soothe(actor,target){           // Empath: heal + calm (cleanse) an ally
   spend(actor,1);
   const b=target.hp; target.hp=Math.min(target.max,target.hp+3);
-  const bad=["burning","bleeding","sickness","poison","slowed","rooted","entangled","blinded","confused","feared","leeching"]; let c=0;
+  const bad=["burning","bleeding","sickness","poison","slowed","rooted","entangled","blinded","confused","feared","leeching","plague"]; let c=0;
   bad.forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
   log(`${actor.name} soothes ${target.name} — heals ${target.hp-b}${c?`, calms ${c} affliction(s)`:""}.`,"l-hit");
   finishAction(actor);
@@ -1246,7 +1247,7 @@ function sigSmorgasbord(actor){          // Pantry sig: throw the whole pantry
 function chickenSoup(actor,target){      // Comfort: soup heals + cures
   spend(actor,1);
   const b=target.hp; target.hp=Math.min(target.max,target.hp+4);
-  let c=0; ["burning","bleeding","sickness","poison","slowed"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  let c=0; ["burning","bleeding","sickness","poison","slowed","plague"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
   log(`${actor.name} ladles chicken soup for ${target.name} — heals ${target.hp-b}${c?`, soothes ${c} ailment(s)`:""}.`,"l-hit");
   finishAction(actor);
 }
@@ -1264,7 +1265,7 @@ function blanket(actor,target){          // Comfort: a cozy shield
 }
 function sigSundayDinner(actor){         // Comfort sig: a feast for the whole squad
   spend(actor,4); actor.sigDone=true;
-  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+5); u.barrier=(u.barrier||0)+4; ["burning","bleeding","sickness","poison"].forEach(k=>{ if(u.st[k]) u.st[k]=0; }); });
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+5); u.barrier=(u.barrier||0)+4; ["burning","bleeding","sickness","poison","plague"].forEach(k=>{ if(u.st[k]) u.st[k]=0; }); });
   log(`${actor.name} lays out a SUNDAY DINNER — the whole squad heals 5, gets Barrier 4, and is cured.`,"l-hit");
   finishAction(actor);
 }
@@ -1303,7 +1304,7 @@ function brace(actor){                    // Invuln: toggle the invulnerable hid
 function shrugOff(actor){                  // Invuln: self-heal + cleanse — "that all you got?"
   spend(actor,1);
   const b=actor.hp; actor.hp=Math.min(actor.max,actor.hp+5);
-  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded"].forEach(k=>{ if(actor.st[k]){ actor.st[k]=0; c++; } });
+  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","plague"].forEach(k=>{ if(actor.st[k]){ actor.st[k]=0; c++; } });
   log(`${actor.name} shrugs it off — heals ${actor.hp-b}${c?`, shakes off ${c} affliction(s)`:""}.`,"l-hit");
   finishAction(actor);
 }
@@ -1368,7 +1369,7 @@ function sigThunderstorm(actor){          // Volt sig: a storm over every band
 function mindMend(actor,target){          // Mind: heal + cleanse an ally
   spend(actor,1);
   const b=target.hp; target.hp=Math.min(target.max,target.hp+4);
-  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","rooted","feared","confused","charmed"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","rooted","feared","confused","charmed","plague"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
   log(`${actor.name} mends ${target.name}'s mind & body — heals ${target.hp-b}${c?`, clears ${c} affliction(s)`:""}.`,"l-hit");
   finishAction(actor);
 }
@@ -1387,7 +1388,7 @@ function mindSpike(actor,target){         // Mind: telepathic Confuse + chip
 }
 function sigMindLink(actor){              // Mind sig: link the whole squad
   spend(actor,4); actor.sigDone=true;
-  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+5); u.dodge=(u.dodge||0)+1; ["burning","bleeding","poison","sickness","slowed","shred","blinded","rooted","feared","confused","charmed"].forEach(k=>{ if(u.st[k]) u.st[k]=0; }); });
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+5); u.dodge=(u.dodge||0)+1; ["burning","bleeding","poison","sickness","slowed","shred","blinded","rooted","feared","confused","charmed","plague"].forEach(k=>{ if(u.st[k]) u.st[k]=0; }); });
   log(`${actor.name} forms a MIND LINK — the whole squad heals 5, gains a Dodge, and is cleansed.`,"l-hit");
   finishAction(actor);
 }
@@ -1615,7 +1616,7 @@ function sustain(actor,target){           // Keys: hold the note — Regen + a l
 function ballad(actor,target){            // Keys: a slow ballad — big heal + cleanse
   spend(actor,1);
   const b=target.hp; target.hp=Math.min(target.max,target.hp+5);
-  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","confused","feared"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
+  let c=0; ["burning","bleeding","poison","sickness","slowed","shred","blinded","confused","feared","plague"].forEach(k=>{ if(target.st[k]){ target.st[k]=0; c++; } });
   log(`${actor.name} plays a tender ballad for ${target.name} — heals ${target.hp-b}${c?`, eases ${c} affliction(s)`:""}.`,"l-hit");
   finishAction(actor);
 }
@@ -1871,6 +1872,7 @@ function enemyTurn(){
     if(e.role==="ranged"){ enemyAttack(e); return; }     // Marauder: fires from any range, never needs to close
     if(e.role==="disruptor"){ disrupt(e); return; }       // Disruptor: strips a buff instead of attacking
     if(e.role==="caster"){ castFire(e); return; }         // Cultist: ranged fire + Burning
+    if(e.role==="plague"){ castPlague(e); return; }       // Plaguebearer: ranged infect — Plague spreads by band
     if(e.role==="binder"){ castFrost(e); return; }        // Frostbinder: ranged Slow
     if(e.role==="mender"){ mend(e); return; }             // Mender: heals an ally
     if(e.role==="alpha"){ rally(e); return; }             // Pack Alpha: shields + heals an ally
@@ -1933,6 +1935,12 @@ function castFrost(e){                                 // Frostbinder: ranged co
   log(`${e.name} rimes ${t.name} with frost.`,"l-part");
   if(damage(t,1,"frost")) setSt(t,"slowed",2);
 }
+function castPlague(e){                                // Plaguebearer: infect a hero — Plague then spreads by band
+  const already=liveParty().some(u=>u.st.plague);
+  const t=pickParty(); if(!t) return;
+  log(`${e.name} ${already?"feeds the outbreak":"breathes a sickly miasma"} at ${t.name}.`,"l-bad");
+  if(damage(t,1,"the miasma") && !t.st.plague) setSt(t,"plague",1);   // dodged → dodged the infection
+}
 function mend(e){                                      // Mender: heals its most-wounded ally (kill it first!)
   const hurt=liveEnemies().filter(x=>x!==e && x.hp<x.max).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];
   if(hurt){ const b=hurt.hp; hurt.hp=Math.min(hurt.max,hurt.hp+5); log(`${e.name} mends ${hurt.name}: +${hurt.hp-b}.`,"l-hit"); }
@@ -1986,6 +1994,21 @@ function endOfRound(){
         if(u.hp>b) log(`  ${u.name} regenerates ${u.hp-b}.`,"l-hit"); }
     }
   });
+  // a2. Contagion — Plague ticks, spreads to one un-infected unit in the SAME band, and burns out if it can't.
+  { const carriers = S.units.filter(u=>alive(u) && u.st.plague);   // snapshot this round's carriers (before any new infections)
+    const fresh = new Set();
+    carriers.forEach(c=>{ damage(c,2,"the Plague"); log(`  ${c.name} festers with Plague: 2.`,"l-bad"); });
+    carriers.forEach(c=>{
+      if(!alive(c)) return;
+      const host = S.units.find(u=>alive(u) && u.side===c.side && u.band===c.band && u!==c && !u.st.plague && !fresh.has(u));
+      if(host){ setSt(host,"plague",1); fresh.add(host); c._spread=true;
+        log(`  ${c.name}'s Plague spreads to ${host.name} at ${BANDS[c.band]}! ☣`,"l-bad"); }
+    });
+    carriers.forEach(c=>{                                          // no fresh host found → the strain dies out
+      if(alive(c) && !c._spread){ c.st.plague=0; log(`  ${c.name}'s Plague finds no new host — it burns out.`,"l-miss"); }
+      delete c._spread;
+    });
+  }
   // b. On-Fire zones (the combo: a Rooted unit can't leave the band it's cooking in)
   S.units.filter(alive).forEach(u=>{
     if(S.fire[u.band]>0){
@@ -2098,6 +2121,7 @@ function unitCard(u){
     if(u.st.sickness)chips.push(chip("fire",`☢ Sickness ${u.st.sickness}`,`Radiation Sickness — takes ${u.st.sickness} damage each round (its stack count). Keeps building all fight; doesn't fade on its own (cleanse to clear).`));
     if(u.st.poison)chips.push(chip("bleed",`☠ Poison ${u.st.poison}`,"Poison — takes 2 damage each round."));
     if(u.st.doom)chips.push(chip("rooted",`☠ Doom ${u.st.doom}`,`Curse of Doom — detonates for 8 damage (ignores Barrier) when the countdown hits 0, in ${u.st.doom} round(s).`));
+    if(u.st.plague)chips.push(chip("fire",`☣ Plague`,"Plague — 2 damage each round, and spreads to one un-infected unit in the SAME band. Burns out if it can't infect anyone. Spread out or cleanse to stop it."));
     if(u.st.confused)chips.push(chip("taunt",`🌀 Confused ${u.st.confused}`,"Confused — on its turn it attacks its own side (or itself) instead of you."));
     if(u.st.leeching)chips.push(chip("bleed",`🦟 Leeching ${u.st.leeching}`,"Leeching — takes 2 each round and heals the Siphon for 2."));
     if(u.extraActs>0)chips.push(chip("stoked",`⏩ Hasted ${u.extraActs}`,`Hasted — has ${u.extraActs} extra action(s) this turn.`));
@@ -2886,6 +2910,7 @@ function enemyTip(role){
     : role==="binder" ? "Frostbinder — ranged control; Slows your heroes from a distance. Squishy: focus it."
     : role==="mender" ? "Mender — heals its most-wounded ally every turn. Kill it first, or the fight drags forever."
     : role==="alpha" ? "Pack Alpha — rallies the warband (shields + heals its most-wounded ally) each turn. Priority kill."
+    : role==="plague" ? "Plaguebearer — infects a hero with a Plague that SPREADS to others in the SAME band each round (2 damage a tick). It burns out only if it can't find a fresh host — so don't cluster: spread out, cleanse it, or kill the bearer fast."
     : "Raider — basic melee; advances to Engaged, then attacks.";
 }
 
