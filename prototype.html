@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:1)))))))))" title="Cycle to the next squad (1 → … → 10)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:1))))))))))" title="Cycle to the next squad (1 → … → 11)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -166,6 +166,11 @@ const HERO_DESC={
   riff:"Lead-guitar artillery — Power Chords that stun + a solo that literally Shreds a band.",
   keys:"Keyboard support — Sustain (regen), Ballad (big heal+cleanse), Anthem (squad buff).",
   wail:"Vocalist striker — in-your-face Mic Drops, a 3-hit belt, and crowd-surf mobility.",
+  rampart:"Dual-shield tank — Bash + Throw (offense) and Phalanx (Taunt + Barrier).",
+  cyclone:"Tornado controller — shoves, drags, and scatters enemies across the bands.",
+  stretch:"Elastic artillery — long-range stretched-punch nukes with knockback.",
+  herald:"Buffer/displacer support — NO heals: shields, extra actions, and moves enemies.",
+  dash:"Super-speed striker — 3-hit blurs and self extra-actions (Blitz). Fast, fragile.",
 };
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
@@ -238,16 +243,23 @@ function team10(){ return [   // the Band — music & fun
   { id:"keys",     name:"Keys",      role:"Keys",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"wail",     name:"Wail",      role:"Vocal",   side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team11(){ return [   // the Vanguard — classic-comics grab-bag
+  { id:"rampart",  name:"Rampart",   role:"Shield",  side:"party", hp:24,max:24, resolve:7, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"cyclone",  name:"Cyclone",   role:"Wind",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"stretch",  name:"Stretch",   role:"Elastic", side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"herald",   name:"Herald",    role:"Marshal", side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"dash",     name:"Dash",      role:"Speed",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===11?team11():team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10(),team11()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -294,7 +306,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===11 ? "TEAM 11 (the Vanguard — Rampart, Cyclone, Stretch, Herald, Dash)" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -1644,6 +1656,157 @@ function sigShowstopper(actor){           // Vocal sig: the showstopper
   finishAction(actor);
 }
 
+/* ─── Team 11 actions (the Vanguard) ──────────────────────────────────────── */
+// Rampart — dual magical shields (offense + defense)
+function shieldBash(actor,target){        // Shield: melee + Stagger + knockback
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s bash glances off ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"a Shield Bash"); setSt(target,"stagger",1); log(`  ${target.name} takes 4 + Staggered.`,"l-part"); }
+  else { damage(target,5,"a Shield Bash"); setSt(target,"stagger",1);
+    if(alive(target)&&target.band<2&&!target.ctrlImmune){ target.band++; log(`  ${target.name} takes 5 + Staggered, knocked to ${BANDS[target.band]}.`,"l-hit"); }
+    else log(`  ${target.name} takes 5 + Staggered.`,"l-hit"); }
+  finishAction(actor);
+}
+function shieldThrow(actor,target){       // Shield: ranged — hurl a shield (any band)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s shield sails wide of ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?4:3,"a thrown shield"); if(t==="full") setSt(target,"stagger",1); log(`  ${target.name} takes ${t==="full"?4:3}${t==="full"?" + Staggered":""} — the shield whirls back.`,t==="full"?"l-hit":"l-part"); }
+  finishAction(actor);
+}
+function phalanx(actor){                   // Shield: raise both shields — Taunt + Barrier
+  spend(actor,1);
+  setSt(actor,"taunting",2); actor.barrier=(actor.barrier||0)+8;
+  log(`${actor.name} raises both shields in a PHALANX — Taunting + Barrier 8.`,"l-root");
+  finishAction(actor);
+}
+function sigAegisStorm(actor){             // Shield sig: spin both shields
+  spend(actor,4); actor.sigDone=true;
+  actor.barrier=(actor.barrier||0)+12; setSt(actor,"taunting",3);
+  log(`${actor.name} becomes a whirling AEGIS STORM — Barrier 12, Taunting, shields scything outward:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,4,"the Aegis Storm"); setSt(e,"stagger",1); log(`  ${e.name} takes 4 + Staggered.`,"l-part"); });
+  finishAction(actor);
+}
+// Cyclone — tornado / forced movement
+function gust(actor,target){               // Wind: push one foe back a band + Slow
+  spend(actor,1);
+  damage(target,2,"a Gust"); setSt(target,"slowed",2);
+  if(alive(target)&&target.band<2&&!target.ctrlImmune){ target.band++; log(`${actor.name}'s Gust blasts ${target.name} back to ${BANDS[target.band]} + Slowed.`,"l-root"); }
+  else log(`${actor.name}'s Gust batters ${target.name} (${target.ctrlImmune?"too heavy to move":"already at Far"}) + Slowed.`,"l-root");
+  finishAction(actor);
+}
+function vortexPull(actor,target){         // Wind: drag a backliner forward + Root
+  spend(actor,1);
+  damage(target,2,"a Vortex");
+  if(!target.ctrlImmune && target.band>0){ target.band--; setSt(target,"rooted",1); log(`${actor.name}'s Vortex drags ${target.name} forward to ${BANDS[target.band]} + Rooted.`,"l-root"); }
+  else { setSt(target,"rooted",1); log(`${actor.name}'s Vortex grips ${target.name}${target.ctrlImmune?" (too heavy to drag)":""} + Rooted.`,"l-root"); }
+  finishAction(actor);
+}
+function twister(actor,band){              // Wind: scatter a band's foes to random bands
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"the Twister"); if(!e.ctrlImmune) e.band=Math.floor(Math.random()*3); setSt(e,"slowed",2); });
+  log(`${actor.name} whips up a TWISTER at ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) scattered + Slowed`:"empty air"}.`,"l-root");
+  finishAction(actor);
+}
+function sigMaelstrom(actor){              // Wind sig: scatter the whole field
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} summons a MAELSTROM — the warband is thrown to the winds:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,4,"the Maelstrom"); if(!e.ctrlImmune){ e.band=Math.floor(Math.random()*3); setSt(e,"slowed",2); } log(`  ${e.name} takes 4 + ${e.ctrlImmune?"held firm":`scattered to ${BANDS[e.band]}`}.`,"l-part"); });
+  finishAction(actor);
+}
+// Stretch — elastic / long-range fists
+function stretchPunch(actor,target){       // Elastic: long-range nuke + knockback
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s stretched fist sails past ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"a Stretch Punch"); log(`  ${target.name} takes 4.`,"l-part"); }
+  else { damage(target,6,"a Stretch Punch");
+    if(alive(target)&&target.band<2&&!target.ctrlImmune){ target.band++; log(`  ${target.name} takes 6 — knocked to ${BANDS[target.band]}.`,"l-hit"); }
+    else log(`  ${target.name} takes 6.`,"l-hit"); }
+  finishAction(actor);
+}
+function windmill(actor,band){             // Elastic: whirling arms rake a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,3,"a windmill of fists"); });
+  log(`${actor.name} windmills stretchy fists across ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 3`:"empty air"}.`,"l-part");
+  finishAction(actor);
+}
+function bounce(actor){                     // Elastic: rubber bounce — Dodge + reposition
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`${actor.name} bounces away like rubber — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigGiantFist(actor){              // Elastic sig: one colossal blow flattens the field
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} winds up a COLOSSAL stretched fist:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,6,"a Giant Fist"); setSt(e,"stagger",1); log(`  ${e.name} takes 6 + Staggered.`,"l-part"); });
+  finishAction(actor);
+}
+// Herald — buffs + displacement (NO heals)
+function fortify(actor,target){            // Marshal: buff an ally — Barrier + Dodge
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+5; target.dodge=(target.dodge||0)+1;
+  log(`${actor.name} fortifies ${target.name} — Barrier ${target.barrier} + a Dodge.`,"l-hit");
+  finishAction(actor);
+}
+function charge(actor,target){             // Marshal: grant an ally an extra action
+  spend(actor,2);
+  target.extraActs=(target.extraActs||0)+1;
+  log(`${actor.name} signals the CHARGE — ${target.name} gets an extra action this turn!`,"l-hit");
+  finishAction(actor);
+}
+function repositionTo(actor,band){         // Marshal: relocate the marked enemy to a band
+  const foe=U(S.pending.foe); S.pending=null;
+  if(!foe||!alive(foe)){ render(); return; }
+  if(foe.ctrlImmune){ log(`${actor.name} can't budge ${foe.name} — too heavy to reposition.`,"l-miss"); finishAction(actor); return; }
+  foe.band=band; setSt(foe,"slowed",1);
+  log(`${actor.name} repositions ${foe.name} to ${BANDS[band]} + Slowed.`,"l-root");
+  finishAction(actor);
+}
+function sigRout(actor){                   // Marshal sig: shields up, enemies hurled back
+  spend(actor,4); actor.sigDone=true;
+  party().filter(alive).forEach(u=>{ u.barrier=(u.barrier||0)+5; u.dodge=(u.dodge||0)+1; });
+  liveEnemies().forEach(e=>{ damage(e,2,"the Rout"); if(!e.ctrlImmune){ e.band=2; setSt(e,"slowed",2); } });
+  log(`${actor.name} calls a ROUT — the squad gets Barrier 5 + a Dodge, and the enemy is hurled to Far + Slowed.`,"l-hit");
+  finishAction(actor);
+}
+// Dash — super speed (action economy)
+function rapidStrikes(actor,target){       // Speed: 2-3 fast hits on one foe
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} blurs past ${target.name} — nothing lands.`,"l-miss"); finishAction(actor); return; }
+  const hits=t==="full"?3:2; log(`  ${actor.name} rips ${hits} strikes into ${target.name}:`,"l-part");
+  for(let i=0;i<hits;i++){ damage(target,2,"a blur"); log(`  → 2.`,"l-part"); }
+  finishAction(actor);
+}
+function blitz(actor){                     // Speed: gain an extra action (the speedster gimmick)
+  spend(actor,2);
+  actor.extraActs=(actor.extraActs||0)+1;
+  log(`${actor.name} kicks into overdrive — an extra action this turn!`,"l-hit");
+  finishAction(actor);
+}
+function hitAndRun(actor,target){          // Speed: strike + free reposition + Dodge
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} dashes in but ${target.name} slips it.`,"l-miss"); }
+  else { damage(target,t==="full"?4:3,"a dashing strike"); log(`  ${target.name} takes ${t==="full"?4:3}.`,t==="full"?"l-hit":"l-part"); }
+  actor.dodge=(actor.dodge||0)+1; actor.moved=false;
+  log(`  ${actor.name} blurs away — +1 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigOverdrive(actor){              // Speed sig: blur across the field + extra action
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} hits OVERDRIVE — a blur across the whole field:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,4,"the Overdrive"); log(`  ${e.name} takes 4.`,"l-part"); });
+  actor.extraActs=(actor.extraActs||0)+1;
+  log(`  ${actor.name} is moving so fast — an extra action!`,"l-hit");
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -1900,7 +2063,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:1))))))));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:1)))))))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -1998,7 +2161,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"||pt==="twister"||pt==="windmill"||(pt==="reposition"&&S.pending.bandPick)){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -2016,6 +2179,9 @@ function render(){
         : pt==="hellfire" ? "Choose a band to rain Hellfire on (Burn everyone there):"
         : pt==="bassdrop" ? "Choose a band to drop the bass on (Slow + Confuse everyone there):"
         : pt==="shredsolo" ? "Choose a band to shred with a solo (damage + Shred everyone there):"
+        : pt==="twister" ? "Choose a band to hit with a Twister (scatters everyone there to random bands):"
+        : pt==="windmill" ? "Choose a band to windmill (hits every enemy there):"
+        : pt==="reposition" ? `Send ${(U(S.pending.foe)||{name:"the foe"}).name} to which band?`
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
         +`<button class="ghost" onclick="cancel()">cancel</button>`;
@@ -2115,6 +2281,16 @@ function render(){
         : pt==="sustain" ? "Click an ally to Sustain (Regen over time)."
         : pt==="ballad" ? "Click an ally to play a Ballad (big heal + cleanse)."
         : pt==="micdrop" ? "Click an enemy at Engaged or Near for a Mic Drop (Stagger)."
+        : pt==="bash" ? "Click an enemy at Engaged or Near for a Shield Bash."
+        : pt==="sthrow" ? "Click any enemy to hurl a shield at."
+        : pt==="gust" ? "Click any enemy to Gust back a band + Slow."
+        : pt==="vortex" ? "Click any enemy to drag forward a band + Root."
+        : pt==="stretch" ? "Click any enemy to nuke with a Stretch Punch (knockback)."
+        : pt==="fortify" ? "Click an ally to Fortify (Barrier + Dodge)."
+        : pt==="charge" ? "Click an ally to grant an extra action."
+        : pt==="reposition" ? "Click any enemy to pick up and reposition."
+        : pt==="rapid" ? "Click an enemy at Engaged or Near for Rapid Strikes."
+        : pt==="hitrun" ? "Click an enemy at Engaged or Near for Hit & Run."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -2348,6 +2524,31 @@ function render(){
     b.push(btn("Belt It (3 hits)",`beltIt(U('${a.id}'))`,false,TIPS.beltIt));
     b.push(btn("Crowd Surf (+Dodge, move)",`crowdSurf(U('${a.id}'))`,false,TIPS.crowdSurf));
     b.push(btn("★ Showstopper",`sigShowstopper(U('${a.id}'))`, a.sigDone, TIPS.showstopper));
+  } else if(a.role==="Shield"){
+    b.push(btn("Shield Bash (stun+knock)","arm('bash')",false,TIPS.shieldBash));
+    b.push(btn("Shield Throw (ranged)","arm('sthrow')",false,TIPS.shieldThrow));
+    b.push(btn("Phalanx (taunt+shield)",`phalanx(U('${a.id}'))`, a.st.taunting>0, TIPS.phalanx));
+    b.push(btn("★ Aegis Storm",`sigAegisStorm(U('${a.id}'))`, a.sigDone, TIPS.aegisStorm));
+  } else if(a.role==="Wind"){
+    b.push(btn("Gust (push back)","arm('gust')",false,TIPS.gust));
+    b.push(btn("Vortex Pull (drag in)","arm('vortex')",false,TIPS.vortexPull));
+    b.push(btn("Twister (scatter band)","arm('twister')",false,TIPS.twister));
+    b.push(btn("★ Maelstrom",`sigMaelstrom(U('${a.id}'))`, a.sigDone, TIPS.maelstrom));
+  } else if(a.role==="Elastic"){
+    b.push(btn("Stretch Punch (nuke)","arm('stretch')",false,TIPS.stretchPunch));
+    b.push(btn("Windmill (band)","arm('windmill')",false,TIPS.windmill));
+    b.push(btn("Bounce (+Dodge, move)",`bounce(U('${a.id}'))`,false,TIPS.bounce));
+    b.push(btn("★ Giant Fist",`sigGiantFist(U('${a.id}'))`, a.sigDone, TIPS.giantFist));
+  } else if(a.role==="Marshal"){
+    b.push(btn("Fortify (shield+dodge)","arm('fortify')",false,TIPS.fortify));
+    b.push(btn("Charge (extra action)","arm('charge')",false,TIPS.charge));
+    b.push(btn("Reposition (move a foe)","arm('reposition')",false,TIPS.reposition));
+    b.push(btn("★ Rout",`sigRout(U('${a.id}'))`, a.sigDone, TIPS.rout));
+  } else if(a.role==="Speed"){
+    b.push(btn("Rapid Strikes (3 hits)","arm('rapid')",false,TIPS.rapidStrikes));
+    b.push(btn("Blitz (extra action)",`blitz(U('${a.id}'))`,false,TIPS.blitz));
+    b.push(btn("Hit & Run (strike+slip)","arm('hitrun')",false,TIPS.hitAndRun));
+    b.push(btn("★ Overdrive",`sigOverdrive(U('${a.id}'))`, a.sigDone, TIPS.overdrive));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -2450,6 +2651,16 @@ function render(){
     ? "Keyboard support: Sustain (regen-over-time), Ballad (big heal + cleanse), Anthem (squad Barrier + Dodge). Crescendo does it all for the whole band."
     : a.role==="Vocal"
     ? "Vocalist striker: get in their face — Mic Drop (melee + stun), Belt It (3 quick hits), Crowd Surf to dive anywhere with a Dodge. Loud, fast, fragile."
+    : a.role==="Shield"
+    ? "Dual-shield tank: Phalanx to Taunt + Barrier (both shields up), then Shield Bash (stun + knockback) up close or Shield Throw from range. Both offense and defense."
+    : a.role==="Wind"
+    ? "Tornado controller: it's all forced movement — Gust shoves a foe back, Vortex Pull drags a backliner forward, Twister scatters a whole band to random zones. Maelstrom throws everyone."
+    : a.role==="Elastic"
+    ? "Elastic artillery: Stretch Punch is a long-range nuke (knockback) from max distance; Windmill rakes a band; Bounce to slip away. Highest single hit, but squishy."
+    : a.role==="Marshal"
+    ? "Buffer/displacer — NO heals. Fortify shields + Dodges an ally, Charge gives an ally an extra action, Reposition picks up an enemy and drops it in any zone. Rout shields all + hurls the enemy back."
+    : a.role==="Speed"
+    ? "Super-speed striker: Rapid Strikes lands 3 fast hits on one foe; Blitz gives YOU an extra action (chain your turns); Hit & Run strikes then slips. Fast and fragile — never get cornered."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -2637,6 +2848,27 @@ const TIPS = {
   beltIt:"Belt It — a screaming run: 3 quick hits at random enemies.",
   crowdSurf:"Crowd Surf — dive into the crowd: +1 Dodge and a free reposition.",
   showstopper:"★ Showstopper (once/expedition) — the whole crowd erupts: heavy damage + Stagger on every enemy.",
+  // Team 11 (the Vanguard)
+  shieldBash:"Shield Bash — melee strike that Staggers and knocks the enemy back a band.",
+  shieldThrow:"Shield Throw — hurl a shield at any band for ranged damage (Staggers on a clean hit).",
+  phalanx:"Phalanx — raise both shields: Taunt every enemy + gain a Barrier.",
+  aegisStorm:"★ Aegis Storm (once/expedition) — a huge self-Barrier + Taunt, and whirling shields damage + Stagger every enemy.",
+  gust:"Gust — blast one enemy back a band (toward Far) and Slow it.",
+  vortexPull:"Vortex Pull — drag one enemy forward a band (toward you) and Root it (good for yanking backline casters into reach).",
+  twister:"Twister — scatter every enemy in a band to random bands + Slow them.",
+  maelstrom:"★ Maelstrom (once/expedition) — damage every enemy and scatter the whole field to random bands + Slow.",
+  stretchPunch:"Stretch Punch — a long-range stretched-fist nuke (any band) that knocks the enemy back. The squad's biggest single hit.",
+  windmill:"Windmill — whirl stretchy fists across a whole band, hitting every enemy there.",
+  bounce:"Bounce — spring away like rubber: +1 Dodge and a free reposition.",
+  giantFist:"★ Giant Fist (once/expedition) — one colossal blow flattens every enemy + Stagger.",
+  fortify:"Fortify — shield an ally with a Barrier and grant a Dodge. (No healing.)",
+  charge:"Charge — give an ally an extra action this turn.",
+  reposition:"Reposition — pick up one enemy and drop it in any zone you choose (then Slow it). Shove a caster into a fire, or a brute off your squishy.",
+  rout:"★ Rout (once/expedition) — the whole squad gets a Barrier + Dodge, and every enemy is hurled to Far + Slowed.",
+  rapidStrikes:"Rapid Strikes — blur into one foe for 2–3 fast hits.",
+  blitz:"Blitz — move so fast you gain an extra action this turn (chain another move).",
+  hitAndRun:"Hit & Run — strike a foe, then blur away: +1 Dodge and a free reposition.",
+  overdrive:"★ Overdrive (once/expedition) — blur across the whole field damaging every enemy, then gain an extra action.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -2752,6 +2984,18 @@ function arm(kind){
   if(kind==="sustain")  S.pending={type:"sustain",actor:a.id,targets:"ally"};
   if(kind==="ballad")   S.pending={type:"ballad",actor:a.id,targets:"ally"};
   if(kind==="micdrop")  S.pending={type:"micdrop",actor:a.id,targets:"enemy"};
+  if(kind==="bash")     S.pending={type:"bash",actor:a.id,targets:"enemy"};
+  if(kind==="sthrow")   S.pending={type:"sthrow",actor:a.id,targets:"enemy"};
+  if(kind==="gust")     S.pending={type:"gust",actor:a.id,targets:"enemy"};
+  if(kind==="vortex")   S.pending={type:"vortex",actor:a.id,targets:"enemy"};
+  if(kind==="twister")  S.pending={type:"twister",actor:a.id};
+  if(kind==="stretch")  S.pending={type:"stretch",actor:a.id,targets:"enemy"};
+  if(kind==="windmill") S.pending={type:"windmill",actor:a.id};
+  if(kind==="fortify")  S.pending={type:"fortify",actor:a.id,targets:"ally"};
+  if(kind==="charge")   S.pending={type:"charge",actor:a.id,targets:"ally"};
+  if(kind==="reposition")S.pending={type:"reposition",actor:a.id,targets:"enemy"};
+  if(kind==="rapid")    S.pending={type:"rapid",actor:a.id,targets:"enemy"};
+  if(kind==="hitrun")   S.pending={type:"hitrun",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -2775,6 +3019,9 @@ function pickBand(i){
   else if(t==="hellfire") hellfire(a,i);
   else if(t==="bassdrop") bassDrop(a,i);
   else if(t==="shredsolo") shredSolo(a,i);
+  else if(t==="twister") twister(a,i);
+  else if(t==="windmill") windmill(a,i);
+  else if(t==="reposition") repositionTo(a,i);
 }
 function pickTool(g){ if(!S.pending) return; const a=U(S.pending.actor);
   S.pending.tool=g; S.pending.toolPick=false;
@@ -2863,6 +3110,16 @@ function pick(arg){
   if(type==="sustain"){ sustain(a,target); return; }
   if(type==="ballad"){ ballad(a,target); return; }
   if(type==="micdrop"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Mic Drop hits Engaged or Near."; return; } micDrop(a,target); return; }
+  if(type==="bash"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Shield Bash hits Engaged or Near."; return; } shieldBash(a,target); return; }
+  if(type==="sthrow"){ shieldThrow(a,target); return; }
+  if(type==="gust"){ gust(a,target); return; }
+  if(type==="vortex"){ vortexPull(a,target); return; }
+  if(type==="stretch"){ stretchPunch(a,target); return; }
+  if(type==="fortify"){ fortify(a,target); return; }
+  if(type==="charge"){ charge(a,target); return; }
+  if(type==="reposition"){ S.pending.foe=target.id; S.pending.bandPick=true; render(); return; }   // stage 2: pick a destination band
+  if(type==="rapid"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Rapid Strikes hit Engaged or Near."; return; } rapidStrikes(a,target); return; }
+  if(type==="hitrun"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Hit & Run hits Engaged or Near."; return; } hitAndRun(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
