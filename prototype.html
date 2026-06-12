@@ -82,7 +82,7 @@
   <div class="doom" id="fightbox" style="display:none">FIGHT <b id="fightlabel" style="color:var(--ink)">1/3</b></div>
   <button onclick="openBuilder()" style="margin-left:auto" title="Pick your own five — one hero per role">🛠 Build Squad</button>
   <button onclick="startExpedition(S.team)" title="Start a 3-fight run — wounds carry between fights">⚔ Expedition</button>
-  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:1)))))))))))" title="Cycle to the next squad (1 → … → 12)">Switch squad ⇄</button>
+  <button onclick="newGame(S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:(S.team===12?13:1))))))))))))" title="Cycle to the next squad (1 → … → 13)">Switch squad ⇄</button>
 </div>
 <div id="builder" class="panel" style="display:none"></div>
 
@@ -176,6 +176,11 @@ const HERO_DESC={
   nitro:"Explosives artillery — grenade frags + cluster bombs; Barrage hits all but staggers him.",
   mojo:"Shaman support — heals via offense: Venom on enemies, and every tick mends your squad.",
   kage:"Ninja striker — throws shuriken and Vanishes (untargetable); strikes hardest from stealth.",
+  pip:"Invincible-thimble tank — taunts and deflects everything; deals almost no damage. Unkillable wall.",
+  goober:"Peanut-butter controller — Roots, Slows, and gums foes solid (Suppressed). Sticky lockdown.",
+  boot:"Soccer-ball artillery — kicks explosive balls: big single + knockback, and band volleys.",
+  shroom:"Mushroom support — healing spores, toadstool shields, and ★ Bloom regrows the fallen.",
+  revv:"Motorcycle striker — charges + knockback, drive-by chip, and high mobility (Dodge + free moves).",
 };
 function mk(id,name,role,hp,band,extra){ return Object.assign({id:id,name:name,role:role,side:"enemy",hp:hp,max:hp,band:band,st:{},acted:false}, extra||{}); }
 function team1(){ return [
@@ -262,16 +267,23 @@ function team12(){ return [   // the Wildcards — an eclectic crew
   { id:"mojo",     name:"Mojo",      role:"Shaman",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
   { id:"kage",     name:"Kage",      role:"Ninja",   side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
 ]; }
+function team13(){ return [   // the Oddballs — absurd everyday items
+  { id:"pip",      name:"Pip",       role:"Thimble", side:"party", hp:30,max:30, resolve:8, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+  { id:"goober",   name:"Goober",    role:"PB",      side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"boot",     name:"Boot",      role:"Soccer",  side:"party", hp:16,max:16, resolve:6, strain:0, focus:2, band:2, st:{}, acted:false, moved:false },
+  { id:"shroom",   name:"Shroom",    role:"Fungus",  side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:1, st:{}, acted:false, moved:false },
+  { id:"revv",     name:"Revv",      role:"Moto",    side:"party", hp:18,max:18, resolve:6, strain:0, focus:2, band:0, st:{}, acted:false, moved:false },
+]; }
 function freshParty(team){
   if(team===0 && customPicks){ const pool=rosterPool(), bands=[0,1,2,1,0];   // custom squad
     return customPicks.map((id,i)=>{ const u=pool[i].find(h=>h.id===id)||pool[i][0]; u.band=bands[i]; return u; }); }
-  return team===12?team12():team===11?team11():team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
+  return team===13?team13():team===12?team12():team===11?team11():team===10?team10():team===9?team9():team===8?team8():team===7?team7():team===6?team6():team===5?team5():team===4?team4():team===3?team3():team===2?team2():team1();
 }
 function snapRound(){ S.units.forEach(u=>{ u._snap=u.hp; }); }   // capture round-start HP (for Chrona's Rewind)
 
 /* ─── Squad builder ───────────────────────────────────────────────────────── */
 // Every team is ordered tank, controller, artillery, support, striker — so index = role.
-function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10(),team11(),team12()]; const pool=[[],[],[],[],[]];
+function rosterPool(){ const teams=[team1(),team2(),team3(),team4(),team5(),team6(),team7(),team8(),team9(),team10(),team11(),team12(),team13()]; const pool=[[],[],[],[],[]];
   teams.forEach(t=>t.forEach((u,i)=>pool[i].push(u))); return pool; }
 function openBuilder(){ buildPool=rosterPool(); build=[null,null,null,null,null]; renderBuilder(); }
 function pickHero(i,j){ build[i]=buildPool[i][j]; renderBuilder(); }
@@ -319,7 +331,7 @@ function foes(fight){                                       // a varied warband 
   ];
 }
 function introLine(team){
-  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===12 ? "TEAM 12 (the Wildcards — Blight, Mimic, Nitro, Mojo, Kage)" : team===11 ? "TEAM 11 (the Vanguard — Rampart, Cyclone, Stretch, Herald, Dash)" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
+  const t = team===0 ? "YOUR CUSTOM SQUAD" : team===13 ? "TEAM 13 (the Oddballs — Pip, Goober, Boot, Shroom, Revv)" : team===12 ? "TEAM 12 (the Wildcards — Blight, Mimic, Nitro, Mojo, Kage)" : team===11 ? "TEAM 11 (the Vanguard — Rampart, Cyclone, Stretch, Herald, Dash)" : team===10 ? "TEAM 10 (the Band — Boom, Bass, Riff, Keys, Wail)" : team===9 ? "TEAM 9 (Nightfall — Vesper, Hex, Grimm, Requiem, Reaper)" : team===8 ? "TEAM 8 (the Squadron — Paragon, Glacier, Surge, Oracle, Comet)" : team===7 ? "TEAM 7 (the junk drawer — Cast Iron, Duct Tape, Pantry, Comfort, Handyman)" : team===6 ? "TEAM 6 (the Mindbenders — Phantasm, Puppeteer, Migraine, Empath, Phobia)" : team===5 ? "TEAM 5 (chaos & tempo — Mirage, Siphon, Prism, Chrona, Deadeye)" : team===4 ? "TEAM 4 (the alchemists — Marrow, Brea, Gray, Mel, Mercer)" : team===3 ? "TEAM 3 (the weird one — Gloop, Puck, Kai, Hazey, Hops)" : team===2 ? "TEAM 2" : "TEAM 1";
   return `${t} vs a mixed warband. Hover an enemy's name for its trait — some can't be controlled, some shoot your back line, some heal or buff the pack. Pick your targets. (Switch squad ⇄ to swap teams.)`;
 }
 function baseState(team,mode){
@@ -1973,6 +1985,144 @@ function sigThousandCuts(actor){          // Ninja sig: a storm of steel, then g
   finishAction(actor);
 }
 
+/* ─── Team 13 actions (the Oddballs) ──────────────────────────────────────── */
+// Pip — the invincible thimble (unkillable, deals ~nothing)
+function thimbleTaunt(actor){             // Thimble: taunt + a deflecting Dodge
+  spend(actor,1);
+  setSt(actor,"taunting",3); actor.dodge=(actor.dodge||0)+1;
+  log(`${actor.name} waggles the thimble and hollers — Taunting (3) + a Dodge. "Come at me!"`,"l-root");
+  finishAction(actor);
+}
+function sonicDeflect(actor){             // Thimble: zip + stack deflections + Guarded
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+2; setSt(actor,"guard",2); actor.moved=false;
+  log(`${actor.name} blurs at sonic speed, thimble flashing — +2 Dodge (deflect), Guarded (halve the rest), free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function thimbleFlick(actor,target){      // Thimble: a pathetic flick — almost no damage, but annoying
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s thimble flick pings off ${target.name} harmlessly.`,"l-miss"); }
+  else { damage(target,1,"a thimble flick"); setSt(target,"stagger",1); log(`  ${target.name} takes 1 (!) — but is Staggered, more annoyed than hurt.`,"l-part"); }
+  finishAction(actor);
+}
+function sigUntouchable(actor){           // Thimble sig: become genuinely untouchable
+  spend(actor,4); actor.sigDone=true;
+  setSt(actor,"taunting",3); actor.dodge=(actor.dodge||0)+5; setSt(actor,"guard",3);
+  log(`${actor.name} becomes UNTOUCHABLE — Taunting all, +5 Dodge (deflect five hits), Guarded (halve anything left). Throw everything; it won't matter.`,"l-root");
+  finishAction(actor);
+}
+// Goober — peanut butter control
+function smear(actor,target){             // PB: stick one foe — Root + Slow
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  The peanut butter won't stick to ${target.name}.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"peanut butter"); setSt(target,"rooted",2); setSt(target,"slowed",2); log(`  ${target.name} takes ${t==="full"?3:2} — stuck fast (Rooted + Slowed).`,"l-root"); }
+  finishAction(actor);
+}
+function stickyTrap(actor,band){          // PB: glue a whole band down
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,2,"a sticky trap"); setSt(e,"rooted",1); setSt(e,"slowed",2); });
+  log(`${actor.name} smears a sticky trap across ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) Rooted + Slowed`:"a wasted glob"}.`,"l-root");
+  finishAction(actor);
+}
+function jammed(actor,target){            // PB: gum a foe solid — Suppressed (can't act)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} can't gum up ${target.name}.`,"l-miss"); finishAction(actor); return; }
+  damage(target,2,"a gluey glob"); setSt(target,"suppressed", t==="full"?2:1);
+  log(target.ctrlImmune ? `  ${target.name} is too big to gum up (takes 2).` : `  ${target.name} is JAMMED — stuck mouth and limb (Suppressed ${t==="full"?2:1}, can't act).`, target.ctrlImmune?"l-part":"l-root");
+  finishAction(actor);
+}
+function sigPBJ(actor){                    // PB sig: the whole field gets stuck
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} upends the whole jar — PB&J everywhere:`,"l-root");
+  liveEnemies().forEach(e=>{ damage(e,3,"PB&J"); setSt(e,"rooted",2); setSt(e,"slowed",2); log(`  ${e.name} takes 3 + Rooted + Slowed.`,"l-part"); });
+  finishAction(actor);
+}
+// Boot — soccer-ball nuker
+function powerKick(actor,target){         // Soccer: a thunderous kicked ball — big single + knockback
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name}'s kick skews wide of ${target.name}.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,5,"a power kick"); log(`  ${target.name} takes 5.`,"l-part"); }
+  else { damage(target,7,"a power kick");
+    if(alive(target)&&target.band<2&&!target.ctrlImmune){ target.band++; log(`  ${target.name} takes 7 — booted back to ${BANDS[target.band]}.`,"l-hit"); }
+    else log(`  ${target.name} takes 7.`,"l-hit"); }
+  finishAction(actor);
+}
+function volley(actor,band){              // Soccer: a volley of balls across a band
+  spend(actor,1);
+  const hit=liveEnemies().filter(e=>e.band===band);
+  hit.forEach(e=>{ damage(e,3,"a volley of balls"); });
+  log(`${actor.name} boots a volley into ${BANDS[band]} — ${hit.length?`${hit.length} foe(s) take 3`:"the empty net"}.`,"l-part");
+  finishAction(actor);
+}
+function sigGoal(actor){                   // Soccer sig: GOOOAL — a screaming megaball
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} winds up and screams "GOOOAL!" — a megaball detonates across the field:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,6,"the megaball"); if(alive(e)&&e.band<2&&!e.ctrlImmune) e.band++; log(`  ${e.name} takes 6 + blasted back.`,"l-part"); });
+  finishAction(actor);
+}
+// Shroom — mushroom support
+function spores(actor,target){            // Fungus: healing spores — heal + regen
+  spend(actor,1);
+  const b=target.hp; target.hp=Math.min(target.max,target.hp+4); setSt(target,"regen",2);
+  log(`${actor.name} puffs healing spores over ${target.name} — heals ${target.hp-b} + Regenerating (2/round).`,"l-hit");
+  finishAction(actor);
+}
+function toadstool(actor,target){         // Fungus: a toadstool cap shield
+  spend(actor,1);
+  target.barrier=(target.barrier||0)+5;
+  log(`${actor.name} sprouts a toadstool cap over ${target.name} — Barrier ${target.barrier}.`,"l-hit");
+  finishAction(actor);
+}
+function fairyRing(actor){                // Fungus: a fairy ring — squad heal
+  spend(actor,2);
+  party().filter(alive).forEach(u=>{ u.hp=Math.min(u.max,u.hp+3); });
+  log(`${actor.name} raises a fairy ring — the whole squad heals 3.`,"l-hit");
+  finishAction(actor);
+}
+function sigBloom(actor){                 // Fungus sig: mushrooms regrow the fallen
+  spend(actor,4); actor.sigDone=true;
+  party().forEach(u=>{ if(!alive(u)){ u.hp=10; u.st.down=false; log(`  ${u.name} regrows from the spores — REVIVED (10 HP).`,"l-hit"); } else { u.hp=Math.min(u.max,u.hp+5); setSt(u,"regen",3); } });
+  log(`${actor.name} triggers a full BLOOM — the fallen regrow, the living heal + Regenerate.`,"l-hit");
+  finishAction(actor);
+}
+// Revv — the motorcycle
+function runOver(actor,target){           // Moto: charge — big hit + knockback
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} guns it but ${target.name} dives clear.`,"l-miss"); }
+  else if(t==="partial"){ damage(target,4,"the motorcycle"); log(`  ${target.name} takes 4.`,"l-part"); }
+  else { damage(target,5,"the motorcycle");
+    if(alive(target)&&target.band<2&&!target.ctrlImmune){ target.band++; log(`  ${target.name} takes 5 — run down and knocked to ${BANDS[target.band]}.`,"l-hit"); }
+    else log(`  ${target.name} takes 5.`,"l-hit"); }
+  finishAction(actor);
+}
+function driveBy(actor,target){           // Moto: a screaming pass — chip + free reposition (any band)
+  const p=S.push; S.push=false; spend(actor,p?2:1);
+  const t=check(actor,target,p?[{name:"Push",n:1}]:[]);
+  if(t==="fail"){ log(`  ${actor.name} roars past ${target.name} — missed.`,"l-miss"); }
+  else { damage(target, t==="full"?3:2,"a drive-by"); log(`  ${target.name} takes ${t==="full"?3:2} as ${actor.name} screams past.`,"l-part"); }
+  actor.moved=false;
+  log(`  ${actor.name} keeps rolling — free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function burnout(actor){                  // Moto: rev the engine — Dodge + free move
+  spend(actor,1);
+  actor.dodge=(actor.dodge||0)+2; actor.moved=false;
+  log(`${actor.name} revs into a screaming burnout — +2 Dodge, free to reposition.`,"l-hit");
+  finishAction(actor);
+}
+function sigRoadkill(actor){              // Moto sig: floor it through everyone
+  spend(actor,4); actor.sigDone=true;
+  log(`${actor.name} pops a wheelie and floors it — ROADKILL through the whole warband:`,"l-hit");
+  liveEnemies().forEach(e=>{ damage(e,5,"ROADKILL"); if(alive(e)&&e.band<2&&!e.ctrlImmune) e.band++; log(`  ${e.name} takes 5 + knocked back.`,"l-part"); });
+  finishAction(actor);
+}
+
 function spend(actor,n){
   actor.strain+=n;
   if(actor.strain>actor.resolve){              // Backlash
@@ -2254,7 +2404,7 @@ function finish(result,why){
   render();
 }
 function startButtons(){
-  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:1))))))))));
+  const next=S.team===1?2:(S.team===2?3:(S.team===3?4:(S.team===4?5:(S.team===5?6:(S.team===6?7:(S.team===7?8:(S.team===8?9:(S.team===9?10:(S.team===10?11:(S.team===11?12:(S.team===12?13:1)))))))))));
   return `<button class="primary" onclick="newGame(S.team)">New skirmish</button>`
     +`<button onclick="startExpedition(S.team)">⚔ Expedition (${S.team===0?"Custom":"Team "+S.team})</button>`
     +(S.team===0?"":`<button onclick="newGame(${next})">Switch to Team ${next}</button>`)
@@ -2355,7 +2505,7 @@ function render(){
 
   if(S.pending){
     const pt=S.pending.type;
-    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"||pt==="twister"||pt==="windmill"||pt==="mockery"||pt==="cluster"||pt==="swarm"||(pt==="reposition"&&S.pending.bandPick)){
+    if(pt==="scorch"||pt==="gale"||pt==="glasszone"||pt==="marbles"||pt==="barrage"||pt==="tarpit"||pt==="irradiate"||pt==="mirrors"||pt==="suggestion"||pt==="mindquake"||pt==="bind"||pt==="flourBomb"||pt==="icewall"||pt==="chain"||pt==="evileye"||pt==="hellfire"||pt==="bassdrop"||pt==="shredsolo"||pt==="twister"||pt==="windmill"||pt==="mockery"||pt==="cluster"||pt==="swarm"||pt==="stickytrap"||pt==="volley"||(pt==="reposition"&&S.pending.bandPick)){
       hint.textContent = pt==="gale" ? "Choose a band to sweep with glass (hits every enemy there):"
         : pt==="glasszone" ? "Choose a band to engulf in a lingering Glasstorm:"
         : pt==="marbles" ? "Choose a band to scatter marbles across (Slows everyone there):"
@@ -2378,6 +2528,8 @@ function render(){
         : pt==="mockery" ? "Choose a band to mock (damage + Confuse everyone there):"
         : pt==="cluster" ? "Choose a band to carpet with cluster grenades:"
         : pt==="swarm" ? "Choose a band to Venom (each tick heals your squad):"
+        : pt==="stickytrap" ? "Choose a band to glue down (Root + Slow everyone there):"
+        : pt==="volley" ? "Choose a band to boot a volley of balls into:"
         : pt==="reposition" ? `Send ${(U(S.pending.foe)||{name:"the foe"}).name} to which band?`
         : "Choose a band to set on fire:";
       acts.innerHTML=BANDS.map((bd,i)=>`<button onclick="pickBand(${i})">${bd}${zoneMark(i)}</button>`).join("")
@@ -2495,6 +2647,14 @@ function render(){
         : pt==="spiritward" ? "Click an ally to shield + cleanse with a Spirit Ward."
         : pt==="shuriken" ? "Click any enemy to throw Shuriken at."
         : pt==="shadowstrike" ? "Click an enemy at Engaged or Near for a Shadow Strike."
+        : pt==="flick" ? "Click an enemy at Engaged or Near to flick (1 damage, Stagger)."
+        : pt==="smear" ? "Click any enemy to Smear with peanut butter (Root + Slow)."
+        : pt==="jammed" ? "Click any enemy to gum solid (Suppressed — can't act)."
+        : pt==="powerkick" ? "Click any enemy to blast with a Power Kick (knockback)."
+        : pt==="spores" ? "Click an ally to heal + Regenerate with Healing Spores."
+        : pt==="toadstool" ? "Click an ally to shield with a Toadstool cap."
+        : pt==="runover" ? "Click an enemy at Engaged or Near to Run Over (knockback)."
+        : pt==="driveby" ? "Click any enemy for a Drive-By (chip + reposition)."
         : "Click any enemy to Firebolt.";
       acts.innerHTML=`<button class="ghost" onclick="cancel()">cancel</button>`;
     }
@@ -2777,6 +2937,30 @@ function render(){
     b.push(btn("Shadow Strike (stealth bonus)","arm('shadowstrike')",false,TIPS.shadowStrike));
     b.push(btn("Vanish (go invisible)",`vanish(U('${a.id}'))`,false,TIPS.vanish));
     b.push(btn("★ Thousand Cuts",`sigThousandCuts(U('${a.id}'))`, a.sigDone, TIPS.thousandCuts));
+  } else if(a.role==="Thimble"){
+    b.push(btn("Taunt (+Dodge)",`thimbleTaunt(U('${a.id}'))`, a.st.taunting>0, TIPS.thimbleTaunt));
+    b.push(btn("Sonic Deflect (++Dodge, move)",`sonicDeflect(U('${a.id}'))`,false,TIPS.sonicDeflect));
+    b.push(btn("Thimble Flick (1 dmg, annoy)","arm('flick')",false,TIPS.thimbleFlick));
+    b.push(btn("★ Untouchable",`sigUntouchable(U('${a.id}'))`, a.sigDone, TIPS.untouchable));
+  } else if(a.role==="PB"){
+    b.push(btn("Smear (root+slow)","arm('smear')",false,TIPS.smear));
+    b.push(btn("Sticky Trap (band)","arm('stickytrap')",false,TIPS.stickyTrap));
+    b.push(btn("Jammed (stick solid)","arm('jammed')",false,TIPS.jammed));
+    b.push(btn("★ PB&J",`sigPBJ(U('${a.id}'))`, a.sigDone, TIPS.pbj));
+  } else if(a.role==="Soccer"){
+    b.push(btn("Power Kick (nuke+knock)","arm('powerkick')",false,TIPS.powerKick));
+    b.push(btn("Volley (band)","arm('volley')",false,TIPS.volley));
+    b.push(btn("★ GOAL!",`sigGoal(U('${a.id}'))`, a.sigDone, TIPS.goal));
+  } else if(a.role==="Fungus"){
+    b.push(btn("Healing Spores (heal+regen)","arm('spores')",false,TIPS.spores));
+    b.push(btn("Toadstool (shield)","arm('toadstool')",false,TIPS.toadstool));
+    b.push(btn("Fairy Ring (squad heal)",`fairyRing(U('${a.id}'))`,false,TIPS.fairyRing));
+    b.push(btn("★ Bloom",`sigBloom(U('${a.id}'))`, a.sigDone, TIPS.bloom));
+  } else if(a.role==="Moto"){
+    b.push(btn("Run Over (charge+knock)","arm('runover')",false,TIPS.runOver));
+    b.push(btn("Drive-By (chip+move)","arm('driveby')",false,TIPS.driveBy));
+    b.push(btn("Burnout (++Dodge, move)",`burnout(U('${a.id}'))`,false,TIPS.burnout));
+    b.push(btn("★ Roadkill",`sigRoadkill(U('${a.id}'))`, a.sigDone, TIPS.roadkill));
   }
   b.push(btn("◀ Advance",`move(U('${a.id}'),-1)`, a.moved||a.band===0||a.stance||a.well, TIPS.advance));
   b.push(btn("Retreat ▶",`move(U('${a.id}'),1)`,  a.moved||a.band===2||a.stance||a.well, TIPS.retreat));
@@ -2899,6 +3083,16 @@ function render(){
     ? "Shaman support: it heals through OFFENSE — Venom an enemy and every tick mends your squad (+1 to each wounded ally). Swarm venoms a band; Spirit Ward shields + cleanses. Keep venom on the field to keep the squad topped up."
     : a.role==="Ninja"
     ? "Ninja striker: Vanish to go untargetable (zones still hit), then Shadow Strike for big bonus damage from stealth. Shuriken hits any band but breaks cover. Hit-and-hide, repeat."
+    : a.role==="Thimble"
+    ? "The invincible thimble: a near-unkillable wall that deals almost NOTHING. Taunt to pull aggro, Sonic Deflect to stack Dodges + halve the rest. Untouchable makes him a black hole for damage. Let the others kill things."
+    : a.role==="PB"
+    ? "Peanut-butter control: Smear roots+slows one, Sticky Trap a whole band, Jammed gums a foe SOLID (can't act). PB&J glues the field. Stick them so the squad can tee off."
+    : a.role==="Soccer"
+    ? "Soccer-ball artillery: Power Kick is a big single hit that boots the foe back a band; Volley sprays a band. GOAL! blasts everyone. Knockback synergizes with anyone who wants foes scattered. Squishy: stay back."
+    : a.role==="Fungus"
+    ? "Mushroom support: Healing Spores (heal + regen) and Toadstool (shield) for one ally, Fairy Ring for the squad. Bloom REGROWS the fallen (revive all + heal). A classic medic with a revive."
+    : a.role==="Moto"
+    ? "Motorcycle striker: Run Over charges + knocks back; Drive-By chips and lets you reposition free (any band); Burnout revs for +2 Dodge + a free move. Roadkill floors it through everyone. Fast and slippery."
     : "Tip: gather the foes, hold them, and reap them.";
 }
 function btn(label,fn,dis,tip){ return `<button ${dis?"disabled":""}${tip?` title="${tip}"`:""} onclick="${fn}">${label}</button>`; }
@@ -3127,6 +3321,26 @@ const TIPS = {
   shadowStrike:"Shadow Strike — melee; +3 bonus damage if you strike from Hidden (then you're revealed).",
   vanish:"Vanish — go invisible: Hidden (immune to targeted attacks, but zones still hit) + a Dodge.",
   thousandCuts:"★ Thousand Cuts (once/expedition) — slash every enemy + Bleed, then vanish (Hidden + Dodge).",
+  // Team 13 (the Oddballs)
+  thimbleTaunt:"Taunt — force every enemy onto Pip, and gain a Dodge to deflect the first hit.",
+  sonicDeflect:"Sonic Deflect — +2 Dodge (deflect 2 hits) + Guarded (halve the rest) + a free reposition. Near-invincible.",
+  thimbleFlick:"Thimble Flick — a pathetic 1-damage flick that Staggers. Pip barely scratches anyone — that's the point.",
+  untouchable:"★ Untouchable (once/expedition) — Taunt all, +5 Dodge, and Guarded. Pip becomes a black hole for damage for several hits.",
+  smear:"Smear — fling peanut butter: damage + Root + Slow one enemy.",
+  stickyTrap:"Sticky Trap — glue a whole band: damage + Root + Slow everyone there.",
+  jammed:"Jammed — gum a foe solid: Suppressed (can't act). Brutes are too big to stick.",
+  pbj:"★ PB&J (once/expedition) — the whole warband gets stuck: damage + Root + Slow every enemy.",
+  powerKick:"Power Kick — a thunderous kicked ball: big single hit that boots the enemy back a band.",
+  volley:"Volley — boot a spray of balls across a whole band.",
+  goal:"★ GOAL! (once/expedition) — a screaming megaball detonates on every enemy + knocks them all back.",
+  spores:"Healing Spores — heal an ally and give them Regenerating (heal over time).",
+  toadstool:"Toadstool — sprout a cap over an ally for a Barrier.",
+  fairyRing:"Fairy Ring — a ring of mushrooms heals the whole squad.",
+  bloom:"★ Bloom (once/expedition) — mushrooms regrow the fallen: revive every downed ally and heal + Regenerate the living.",
+  runOver:"Run Over — gun the bike into a foe: heavy hit + knock it back a band.",
+  driveBy:"Drive-By — scream past any enemy for a chip hit, then reposition free.",
+  burnout:"Burnout — rev the engine: +2 Dodge and a free reposition.",
+  roadkill:"★ Roadkill (once/expedition) — floor it through the whole warband: heavy damage + knock everyone back.",
   // generic
   advance:"Move toward Engaged — free (doesn't use your action).",
   retreat:"Move toward Far — free (doesn't use your action).",
@@ -3265,6 +3479,16 @@ function arm(kind){
   if(kind==="spiritward")S.pending={type:"spiritward",actor:a.id,targets:"ally"};
   if(kind==="shuriken") S.pending={type:"shuriken",actor:a.id,targets:"enemy"};
   if(kind==="shadowstrike")S.pending={type:"shadowstrike",actor:a.id,targets:"enemy"};
+  if(kind==="flick")    S.pending={type:"flick",actor:a.id,targets:"enemy"};
+  if(kind==="smear")    S.pending={type:"smear",actor:a.id,targets:"enemy"};
+  if(kind==="stickytrap")S.pending={type:"stickytrap",actor:a.id};
+  if(kind==="jammed")   S.pending={type:"jammed",actor:a.id,targets:"enemy"};
+  if(kind==="powerkick")S.pending={type:"powerkick",actor:a.id,targets:"enemy"};
+  if(kind==="volley")   S.pending={type:"volley",actor:a.id};
+  if(kind==="spores")   S.pending={type:"spores",actor:a.id,targets:"ally"};
+  if(kind==="toadstool")S.pending={type:"toadstool",actor:a.id,targets:"ally"};
+  if(kind==="runover")  S.pending={type:"runover",actor:a.id,targets:"enemy"};
+  if(kind==="driveby")  S.pending={type:"driveby",actor:a.id,targets:"enemy"};
   render();
 }
 function cancel(){ S.pending=null; render(); }
@@ -3294,6 +3518,8 @@ function pickBand(i){
   else if(t==="mockery") mockery(a,i);
   else if(t==="cluster") cluster(a,i);
   else if(t==="swarm") swarm(a,i);
+  else if(t==="stickytrap") stickyTrap(a,i);
+  else if(t==="volley") volley(a,i);
 }
 function pickTool(g){ if(!S.pending) return; const a=U(S.pending.actor);
   S.pending.tool=g; S.pending.toolPick=false;
@@ -3399,6 +3625,14 @@ function pick(arg){
   if(type==="spiritward"){ spiritWard(a,target); return; }
   if(type==="shuriken"){ shuriken(a,target); return; }
   if(type==="shadowstrike"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Shadow Strike hits Engaged or Near."; return; } shadowStrike(a,target); return; }
+  if(type==="flick"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — the Thimble Flick hits Engaged or Near."; return; } thimbleFlick(a,target); return; }
+  if(type==="smear"){ smear(a,target); return; }
+  if(type==="jammed"){ jammed(a,target); return; }
+  if(type==="powerkick"){ powerKick(a,target); return; }
+  if(type==="spores"){ spores(a,target); return; }
+  if(type==="toadstool"){ toadstool(a,target); return; }
+  if(type==="runover"){ if(target.band>1){ document.getElementById("hint").textContent="Out of reach — Run Over hits Engaged or Near."; return; } runOver(a,target); return; }
+  if(type==="driveby"){ driveBy(a,target); return; }
   if(type==="summon"){
     if(target.band>1){ document.getElementById("hint").textContent="Out of reach — conjured weapons hit Engaged or Near."; return; }
     summonArms(a,target); return;
